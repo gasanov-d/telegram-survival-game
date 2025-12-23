@@ -14,10 +14,7 @@ html, body {
   overflow: hidden;
   background: #2e7d32;
 }
-
-canvas {
-  display: block;
-}
+canvas { display: block; }
 
 /* Джойстик */
 #joystick {
@@ -28,9 +25,7 @@ canvas {
   height: 120px;
   border-radius: 50%;
   background: rgba(0,0,0,0.3);
-  touch-action: none;
 }
-
 #stick {
   position: absolute;
   left: 35px;
@@ -40,6 +35,23 @@ canvas {
   border-radius: 50%;
   background: rgba(255,255,255,0.9);
 }
+
+/* Кнопка удара */
+#action {
+  position: fixed;
+  bottom: 60px;
+  right: 40px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255,0,0,0.85);
+  color: #fff;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
 </style>
 </head>
 
@@ -47,90 +59,91 @@ canvas {
 
 <canvas id="game"></canvas>
 
-<div id="joystick">
-  <div id="stick"></div>
-</div>
+<div id="joystick"><div id="stick"></div></div>
+<div id="action">УДАР</div>
 
 <script>
+/* === TELEGRAM === */
 const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
 
+/* === CANVAS === */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+canvas.width = innerWidth;
+canvas.height = innerHeight;
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+/* === МИР === */
+const world = { width: 3000, height: 3000 };
 
-// МИР
-const world = {
-  width: 3000,
-  height: 3000
-};
-
-// ИГРОК
+/* === ИГРОК === */
 const player = {
   x: world.width / 2,
   y: world.height / 2,
-  size: 30,
+  size: 28,
   speed: 4,
   dx: 0,
   dy: 0
 };
 
-// КАМЕРА
-const camera = {
-  x: 0,
-  y: 0
-};
+/* === КАМЕРА === */
+const camera = { x: 0, y: 0 };
 
-// ДЖОЙСТИК
+/* === ДЕРЕВЬЯ === */
+const trees = [];
+for (let i = 0; i < 25; i++) {
+  trees.push({
+    x: Math.random() * world.width,
+    y: Math.random() * world.height,
+    size: 40,
+    hp: 3
+  });
+}
+
+/* === ДЖОЙСТИК === */
 const joystick = document.getElementById("joystick");
 const stick = document.getElementById("stick");
+let drag = false;
 
-let dragging = false;
-let center = { x: 60, y: 60 };
-
-joystick.addEventListener("touchstart", () => dragging = true);
-joystick.addEventListener("touchend", () => {
-  dragging = false;
+joystick.ontouchstart = () => drag = true;
+joystick.ontouchend = () => {
+  drag = false;
   stick.style.left = "35px";
   stick.style.top = "35px";
-  player.dx = 0;
-  player.dy = 0;
-});
+  player.dx = player.dy = 0;
+};
 
-joystick.addEventListener("touchmove", e => {
-  if (!dragging) return;
-  const rect = joystick.getBoundingClientRect();
-  const touch = e.touches[0];
+joystick.ontouchmove = e => {
+  if (!drag) return;
+  const r = joystick.getBoundingClientRect();
+  const t = e.touches[0];
+  let dx = t.clientX - r.left - 60;
+  let dy = t.clientY - r.top - 60;
+  const d = Math.hypot(dx, dy);
+  if (d > 40) { dx *= 40/d; dy *= 40/d; }
+  stick.style.left = `${dx+60-25}px`;
+  stick.style.top = `${dy+60-25}px`;
+  player.dx = dx/40;
+  player.dy = dy/40;
+};
 
-  let x = touch.clientX - rect.left;
-  let y = touch.clientY - rect.top;
+/* === УДАР === */
+document.getElementById("action").onclick = () => {
+  trees.forEach(t => {
+    const dist = Math.hypot(player.x - t.x, player.y - t.y);
+    if (dist < 60 && t.hp > 0) {
+      t.hp--;
+      if (t.hp === 0) t.dead = true;
+    }
+  });
+};
 
-  let dx = x - center.x;
-  let dy = y - center.y;
-  let dist = Math.hypot(dx, dy);
-  let max = 40;
-
-  if (dist > max) {
-    dx *= max / dist;
-    dy *= max / dist;
-  }
-
-  stick.style.left = `${center.x + dx - 25}px`;
-  stick.style.top = `${center.y + dy - 25}px`;
-
-  player.dx = dx / max;
-  player.dy = dy / max;
-});
-
-// ИГРОВОЙ ЦИКЛ
+/* === ИГРОВОЙ ЦИКЛ === */
 function update() {
   player.x += player.dx * player.speed;
   player.y += player.dy * player.speed;
 
-  // ГРАНИЦЫ
   player.x = Math.max(0, Math.min(world.width, player.x));
   player.y = Math.max(0, Math.min(world.height, player.y));
 
@@ -139,19 +152,26 @@ function update() {
 }
 
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // ФОН
   ctx.fillStyle = "#388e3c";
   ctx.fillRect(-camera.x, -camera.y, world.width, world.height);
 
-  // ИГРОК
+  trees.forEach(t => {
+    if (t.dead) return;
+    ctx.fillStyle = "#1b5e20";
+    ctx.fillRect(
+      t.x - camera.x - t.size/2,
+      t.y - camera.y - t.size/2,
+      t.size, t.size
+    );
+  });
+
   ctx.fillStyle = "#ffeb3b";
   ctx.fillRect(
-    player.x - camera.x - player.size / 2,
-    player.y - camera.y - player.size / 2,
-    player.size,
-    player.size
+    player.x - camera.x - player.size/2,
+    player.y - camera.y - player.size/2,
+    player.size, player.size
   );
 }
 
@@ -160,7 +180,6 @@ function loop() {
   draw();
   requestAnimationFrame(loop);
 }
-
 loop();
 </script>
 
