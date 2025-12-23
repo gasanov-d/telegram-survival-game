@@ -1,49 +1,118 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Survival</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      margin: 0;
-      background: #0f0f0f;
-      color: white;
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .screen {
-      text-align: center;
-    }
-    button {
-      padding: 14px 28px;
-      font-size: 18px;
-      border: none;
-      border-radius: 8px;
-      background: #1e90ff;
-      color: white;
-    }
-  </style>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Survival</title>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<style>
+body {
+  margin: 0;
+  background: #111;
+  color: #fff;
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+#game {
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.stats {
+  margin-bottom: 15px;
+}
+
+button {
+  width: 100%;
+  margin: 5px 0;
+  padding: 12px;
+  font-size: 16px;
+  border: none;
+  border-radius: 6px;
+  background: #2a9df4;
+  color: #fff;
+}
+</style>
 </head>
+
 <body>
-  <div class="screen">
-    <h1>🌲 Survival</h1>
-    <p>Web App работает</p>
-    <button onclick="start()">Начать</button>
+
+<div id="game">
+  <h2>🧍 Выживший</h2>
+
+  <div class="stats">
+    ❤️ HP: <span id="hp">100</span><br>
+    🍖 Голод: <span id="food">100</span><br>
+    ⚡ Энергия: <span id="energy">100</span>
   </div>
 
-  <script>
-    const tg = window.Telegram.WebApp;
+  <button onclick="explore()">🔍 Исследовать</button>
+  <button onclick="eat()">🍎 Поесть</button>
+  <button onclick="rest()">💤 Отдохнуть</button>
+
+  <p id="log"></p>
+</div>
+
+<script>
+const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
-    function start() {
-      document.querySelector('.screen').innerHTML =
-        '<h2>Игра запущена</h2><p>Это Web App внутри Telegram</p>';
-    }
-  </script>
+
+let hp = 100;
+let food = 100;
+let energy = 100;
+
+function update() {
+  document.getElementById('hp').textContent = hp;
+  document.getElementById('food').textContent = food;
+  document.getElementById('energy').textContent = energy;
+
+  if (hp <= 0) {
+    document.getElementById('game').innerHTML = "<h2>☠️ Ты умер</h2>";
+  }
+}
+
+function explore() {
+  food -= 10;
+  energy -= 15;
+
+  if (Math.random() < 0.3) {
+    hp -= 20;
+    log("Ты ранен во время исследования");
+  } else {
+    log("Ты нашёл безопасное место");
+  }
+
+  update();
+}
+
+function eat() {
+  food += 20;
+  if (food > 100) food = 100;
+  log("Ты поел");
+  update();
+}
+
+function rest() {
+  energy += 20;
+  if (energy > 100) energy = 100;
+  log("Ты отдохнул");
+  update();
+}
+
+function log(text) {
+  document.getElementById('log').textContent = text;
+}
+
+update();
+</script>
+
 </body>
 </html>
