@@ -1,182 +1,209 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>Survival</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Survival Prototype</title>
+
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
 <style>
-body {
-  margin:0;
-  background:#111;
-  color:#fff;
-  font-family:Arial;
-  overflow:hidden;
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #111;
+  color: #fff;
+  overflow: hidden;
+  font-family: Arial;
 }
+
+#game {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: #2e7d32;
+}
+
+.tile {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  box-sizing: border-box;
+}
+
+.grass { background: #2e7d32; }
+.tree  { background: #1b5e20; }
+.house { background: #795548; }
+
+#player {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  background: yellow;
+  z-index: 10;
+  border-radius: 4px;
+}
+
 #ui {
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  background:#000a;
-  padding:6px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(0,0,0,0.7);
+  padding: 8px;
+  display: flex;
+  justify-content: space-between;
 }
-button {
-  margin:3px;
-  padding:10px;
-  background:#2a9df4;
-  border:none;
-  border-radius:6px;
-  color:white;
-  font-size:14px;
+
+.btn {
+  background: #1976d2;
+  padding: 10px;
+  border-radius: 6px;
+  text-align: center;
+  user-select: none;
 }
-canvas {
-  display:block;
+
+#joystick {
+  position: absolute;
+  bottom: 80px;
+  left: 20px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+}
+
+#stick {
+  position: absolute;
+  left: 40px;
+  top: 40px;
+  width: 40px;
+  height: 40px;
+  background: rgba(255,255,255,0.6);
+  border-radius: 50%;
 }
 </style>
 </head>
+
 <body>
 
-<canvas id="game"></canvas>
+<div id="game"></div>
+<div id="player"></div>
+
+<div id="joystick">
+  <div id="stick"></div>
+</div>
 
 <div id="ui">
-  ❤️ HP: <span id="hp"></span>
-  🌲 Wood: <span id="wood"></span>
-  ⛰ Stone: <span id="stone"></span><br>
-  <button onclick="buildHouse()">🏠 Дом (10🌲)</button>
-  <button onclick="buildFire()">🔥 Костёр (5🌲)</button>
+  <div class="btn" onclick="buildHouse()">🏠 Строить</div>
+  <div>🌲 Дерево: <span id="wood">0</span></div>
 </div>
 
 <script>
 const tg = window.Telegram.WebApp;
-tg.ready(); tg.expand();
+tg.expand();
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-canvas.width = innerWidth;
-canvas.height = innerHeight;
+const game = document.getElementById("game");
+const player = document.getElementById("player");
+const woodEl = document.getElementById("wood");
 
-const TILE = 32;
-const MAP_W = 50;
-const MAP_H = 50;
+const TILE = 40;
+const MAP_W = 20;
+const MAP_H = 15;
 
-let camera = {x:0,y:0};
+let map = [];
+let wood = 0;
 
-const player = {
-  x: 25, y: 25,
-  hp: 100,
-  wood: 0,
-  stone: 0
-};
+let px = 5;
+let py = 5;
 
-const map = [];
-const objects = [];
-const enemies = [];
+function createMap() {
+  game.innerHTML = "";
+  map = [];
 
-for(let y=0;y<MAP_H;y++){
-  map[y]=[];
-  for(let x=0;x<MAP_W;x++){
-    map[y][x]=Math.random()<0.1?"water":"grass";
-    if(Math.random()<0.08) objects.push({type:"tree",x,y,hp:3});
-    if(Math.random()<0.05) objects.push({type:"stone",x,y,hp:4});
-  }
-}
+  for (let y = 0; y < MAP_H; y++) {
+    map[y] = [];
+    for (let x = 0; x < MAP_W; x++) {
+      let type = Math.random() < 0.2 ? "tree" : "grass";
+      map[y][x] = type;
 
-for(let i=0;i<10;i++){
-  enemies.push({x:Math.random()*MAP_W,y:Math.random()*MAP_H,hp:20});
-}
+      const tile = document.createElement("div");
+      tile.className = "tile " + type;
+      tile.style.left = x * TILE + "px";
+      tile.style.top  = y * TILE + "px";
 
-const keys = {};
-addEventListener("keydown",e=>keys[e.key]=true);
-addEventListener("keyup",e=>keys[e.key]=false);
+      tile.onclick = () => {
+        if (map[y][x] === "tree") {
+          map[y][x] = "grass";
+          tile.className = "tile grass";
+          wood++;
+          woodEl.textContent = wood;
+        }
+      };
 
-function buildHouse(){
-  if(player.wood>=10){
-    player.wood-=10;
-    objects.push({type:"house",x:player.x,y:player.y});
-  }
-}
-
-function buildFire(){
-  if(player.wood>=5){
-    player.wood-=5;
-    objects.push({type:"fire",x:player.x,y:player.y});
-  }
-}
-
-function update(){
-  let dx=0,dy=0;
-  if(keys["w"])dy--;
-  if(keys["s"])dy++;
-  if(keys["a"])dx--;
-  if(keys["d"])dx++;
-  player.x+=dx*0.1;
-  player.y+=dy*0.1;
-
-  camera.x = player.x*TILE - canvas.width/2;
-  camera.y = player.y*TILE - canvas.height/2;
-
-  objects.forEach(o=>{
-    if(Math.abs(o.x-player.x)<1 && Math.abs(o.y-player.y)<1 && o.hp){
-      if(keys[" "]){
-        o.hp--;
-        if(o.type=="tree") player.wood++;
-        if(o.type=="stone") player.stone++;
-      }
-    }
-  });
-
-  enemies.forEach(e=>{
-    const dx=player.x-e.x, dy=player.y-e.y;
-    const d=Math.hypot(dx,dy);
-    if(d<5){
-      e.x+=dx/d*0.01;
-      e.y+=dy/d*0.01;
-    }
-    if(d<1){
-      player.hp--;
-    }
-  });
-
-  document.getElementById("hp").textContent = player.hp;
-  document.getElementById("wood").textContent = player.wood;
-  document.getElementById("stone").textContent = player.stone;
-}
-
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  for(let y=0;y<MAP_H;y++){
-    for(let x=0;x<MAP_W;x++){
-      ctx.fillStyle = map[y][x]=="grass"?"#1c7":"#246";
-      ctx.fillRect(x*TILE-camera.x,y*TILE-camera.y,TILE,TILE);
+      game.appendChild(tile);
     }
   }
-
-  objects.forEach(o=>{
-    ctx.fillStyle =
-      o.type=="tree"?"#070":
-      o.type=="stone"?"#888":
-      o.type=="house"?"#964":
-      "#f60";
-    ctx.fillRect(o.x*TILE-camera.x,o.y*TILE-camera.y,TILE,TILE);
-  });
-
-  enemies.forEach(e=>{
-    ctx.fillStyle="red";
-    ctx.fillRect(e.x*TILE-camera.x,e.y*TILE-camera.y,TILE,TILE);
-  });
-
-  ctx.fillStyle="yellow";
-  ctx.fillRect(player.x*TILE-camera.x,player.y*TILE-camera.y,TILE,TILE);
 }
 
-function loop(){
-  update();
-  draw();
-  requestAnimationFrame(loop);
+function renderPlayer() {
+  player.style.left = px * TILE + 4 + "px";
+  player.style.top  = py * TILE + 4 + "px";
 }
-loop();
+
+function move(dx, dy) {
+  const nx = px + dx;
+  const ny = py + dy;
+  if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return;
+  px = nx;
+  py = ny;
+  renderPlayer();
+}
+
+function buildHouse() {
+  if (wood < 5) return alert("Нужно 5 дерева");
+  if (map[py][px] !== "grass") return;
+
+  map[py][px] = "house";
+  const index = py * MAP_W + px;
+  game.children[index].className = "tile house";
+  wood -= 5;
+  woodEl.textContent = wood;
+}
+
+//// JOYSTICK
+const joystick = document.getElementById("joystick");
+const stick = document.getElementById("stick");
+
+let joyX = 0, joyY = 0;
+
+joystick.addEventListener("touchmove", e => {
+  const r = joystick.getBoundingClientRect();
+  const t = e.touches[0];
+  joyX = t.clientX - r.left - 60;
+  joyY = t.clientY - r.top  - 60;
+
+  joyX = Math.max(-30, Math.min(30, joyX));
+  joyY = Math.max(-30, Math.min(30, joyY));
+
+  stick.style.left = joyX + 40 + "px";
+  stick.style.top  = joyY + 40 + "px";
+});
+
+joystick.addEventListener("touchend", () => {
+  joyX = joyY = 0;
+  stick.style.left = "40px";
+  stick.style.top  = "40px";
+});
+
+setInterval(() => {
+  if (Math.abs(joyX) > 10) move(Math.sign(joyX), 0);
+  if (Math.abs(joyY) > 10) move(0, Math.sign(joyY));
+}, 200);
+
+createMap();
+renderPlayer();
 </script>
+
 </body>
 </html>
