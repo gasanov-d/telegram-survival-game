@@ -2,164 +2,71 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Survival Build</title>
-
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Survival Phaser</title>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
 <style>
-html,body{margin:0;padding:0;overflow:hidden;background:#2e7d32;font-family:Arial}
-canvas{display:block}
-
-/* UI */
-#top{position:fixed;top:10px;left:10px;color:#fff;z-index:10}
-#buttons{position:fixed;bottom:40px;right:30px;z-index:10}
-.btn{
-  width:80px;height:80px;border-radius:50%;
-  background:#37474f;color:#fff;
-  display:flex;align-items:center;justify-content:center;
-  margin-top:10px;font-weight:bold
-}
-.btn.active{background:#ff9800}
-
-/* Joystick */
-#joy{position:fixed;bottom:40px;left:30px;width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,.3);z-index:10}
-#stick{width:50px;height:50px;border-radius:50%;background:#fff;position:absolute;left:35px;top:35px}
+html,body{margin:0;padding:0;background:#000}
 </style>
 </head>
-
 <body>
 
-<canvas id="game"></canvas>
-
-<div id="top">🪵 <span id="wood">20</span></div>
-
-<div id="joy"><div id="stick"></div></div>
-
-<div id="buttons">
-  <div class="btn" id="foundation">ФУНД</div>
-  <div class="btn" id="wall">СТЕНА</div>
-</div>
-
 <script>
-const tg=window.Telegram.WebApp;tg.ready();tg.expand();
-const c=document.getElementById("game"),ctx=c.getContext("2d");
-c.width=innerWidth;c.height=innerHeight;
-
-const GRID=50;
-const world={w:3000,h:3000};
-const player={x:1500,y:1500,s:28,spd:4,dx:0,dy:0};
-const cam={x:0,y:0};
-
-let wood=20;
-let mode=null; // foundation | wall
-
-const foundations=[];
-const walls=[];
-
-/* GRID HELPERS */
-function snap(v){return Math.floor(v/GRID)*GRID+GRID/2}
-function cellKey(x,y){return `${x}_${y}`}
-
-/* JOYSTICK */
-const joy=document.getElementById("joy"),stick=document.getElementById("stick");
-let drag=false;
-joy.ontouchstart=()=>drag=true;
-joy.ontouchend=()=>{drag=false;stick.style.left="35px";stick.style.top="35px";player.dx=player.dy=0}
-joy.ontouchmove=e=>{
-if(!drag)return;
-let r=joy.getBoundingClientRect(),t=e.touches[0];
-let dx=t.clientX-r.left-60,dy=t.clientY-r.top-60;
-let d=Math.hypot(dx,dy);if(d>40){dx*=40/d;dy*=40/d}
-stick.style.left=dx+60-25+"px";stick.style.top=dy+60-25+"px";
-player.dx=dx/40;player.dy=dy/40;
+const config = {
+  type: Phaser.AUTO,
+  width: window.innerWidth,
+  height: window.innerHeight,
+  physics: {
+    default: "arcade",
+    arcade: { gravity: { y: 0 }, debug: false }
+  },
+  scene: { preload, create, update }
 };
 
-/* BUTTONS */
-document.getElementById("foundation").onclick=()=>modeToggle("foundation");
-document.getElementById("wall").onclick=()=>modeToggle("wall");
+const game = new Phaser.Game(config);
 
-function modeToggle(m){
-  mode = mode===m ? null : m;
-  document.querySelectorAll(".btn").forEach(b=>b.classList.remove("active"));
-  if(mode) document.getElementById(m).classList.add("active");
+let player, cursors;
+
+function preload() {
+  this.load.image("player","https://labs.phaser.io/assets/sprites/phaser-dude.png");
+  this.load.image("tile","https://labs.phaser.io/assets/tilemaps/tiles/grass-tiles-2-small.png");
 }
 
-/* PLACE */
-c.onclick=()=>{
-if(!mode)return;
-if(wood<5)return;
+function create() {
+  // МИР
+  const worldWidth = 3000;
+  const worldHeight = 3000;
+  this.physics.world.setBounds(0,0,worldWidth,worldHeight);
 
-const gx=snap(player.x), gy=snap(player.y);
-const key=cellKey(gx,gy);
+  // ФОН (ландшафт)
+  for(let x=0;x<worldWidth;x+=64){
+    for(let y=0;y<worldHeight;y+=64){
+      this.add.image(x,y,"tile").setOrigin(0);
+    }
+  }
 
-if(mode==="foundation"){
-if(foundations.some(f=>f.key===key))return;
-foundations.push({x:gx,y:gy,key});
-wood-=5;
+  // ИГРОК
+  player = this.physics.add.sprite(1500,1500,"player");
+  player.setScale(0.7);
+  player.setCollideWorldBounds(true);
+
+  // КАМЕРА
+  this.cameras.main.startFollow(player);
+  this.cameras.main.setBounds(0,0,worldWidth,worldHeight);
+
+  // УПРАВЛЕНИЕ
+  cursors = this.input.keyboard.createCursorKeys();
 }
 
-if(mode==="wall"){
-if(!foundations.some(f=>f.key===key))return;
-if(walls.some(w=>w.key===key))return;
-walls.push({x:gx,y:gy,key});
-wood-=2;
+function update() {
+  const speed = 250;
+  player.setVelocity(0);
+
+  if (cursors.left.isDown) player.setVelocityX(-speed);
+  if (cursors.right.isDown) player.setVelocityX(speed);
+  if (cursors.up.isDown) player.setVelocityY(-speed);
+  if (cursors.down.isDown) player.setVelocityY(speed);
 }
-
-document.getElementById("wood").textContent=wood;
-};
-
-/* UPDATE */
-function update(){
-player.x+=player.dx*player.spd;
-player.y+=player.dy*player.spd;
-cam.x=player.x-c.width/2;
-cam.y=player.y-c.height/2;
-}
-
-/* DRAW */
-function draw(){
-ctx.clearRect(0,0,c.width,c.height);
-ctx.fillStyle="#388e3c";
-ctx.fillRect(-cam.x,-cam.y,world.w,world.h);
-
-/* grid */
-ctx.strokeStyle="rgba(255,255,255,.1)";
-for(let x=0;x<world.w;x+=GRID){
-ctx.beginPath();ctx.moveTo(x-cam.x,0-cam.y);ctx.lineTo(x-cam.x,world.h-cam.y);ctx.stroke();
-}
-for(let y=0;y<world.h;y+=GRID){
-ctx.beginPath();ctx.moveTo(0-cam.x,y-cam.y);ctx.lineTo(world.w-cam.x,y-cam.y);ctx.stroke();
-}
-
-/* foundations */
-ctx.fillStyle="#8d6e63";
-foundations.forEach(f=>{
-ctx.fillRect(f.x-cam.x-GRID/2,f.y-cam.y-GRID/2,GRID,GRID);
-});
-
-/* walls */
-ctx.fillStyle="#5d4037";
-walls.forEach(w=>{
-ctx.fillRect(w.x-cam.x-GRID/2,w.y-cam.y-GRID/2,GRID,GRID/2);
-});
-
-/* ghost */
-if(mode){
-ctx.globalAlpha=.5;
-const gx=snap(player.x), gy=snap(player.y);
-ctx.fillStyle=mode==="foundation"?"#8d6e63":"#5d4037";
-ctx.fillRect(gx-cam.x-GRID/2,gy-cam.y-GRID/2,GRID,GRID);
-ctx.globalAlpha=1;
-}
-
-/* player */
-ctx.fillStyle="#ffeb3b";
-ctx.fillRect(c.width/2-player.s/2,c.height/2-player.s/2,player.s,player.s);
-}
-
-function loop(){update();draw();requestAnimationFrame(loop)}
-loop();
 </script>
 
 </body>
