@@ -1,201 +1,120 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Last Island Survival (Demo)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>Survival</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Telegram WebApp -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <style>
-    body {
-      margin: 0;
-      background: #0f1115;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #000;
+  overflow: hidden;
+}
 
-    #game {
-      width: 90%;
-      max-width: 420px;
-      text-align: center;
-    }
-
-    .card {
-      background: #1c1f26;
-      padding: 12px;
-      border-radius: 10px;
-      margin-bottom: 10px;
-    }
-
-    button {
-      width: 100%;
-      padding: 14px;
-      margin: 6px 0;
-      font-size: 16px;
-      border: none;
-      border-radius: 10px;
-      background: #2a9df4;
-      color: #fff;
-    }
-
-    button:active {
-      opacity: 0.8;
-    }
-
-    .log {
-      margin-top: 10px;
-      min-height: 24px;
-      color: #9ad1ff;
-    }
-  </style>
+canvas {
+  display: block;
+  background: #2e7d32;
+}
+</style>
 </head>
 <body>
 
-<div id="game"></div>
+<canvas id="game"></canvas>
 
 <script>
-  // === TELEGRAM INIT ===
-  const tg = window.Telegram.WebApp;
-  tg.ready();
-  tg.expand();
+/* === TELEGRAM === */
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
 
-  // === GAME STATE ===
-  let location = "base";
+/* === CANVAS === */
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-  let stats = {
-    hp: 100,
-    hunger: 100,
-    energy: 100
-  };
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
 
-  let resources = {
-    wood: 0
-  };
+/* === PLAYER === */
+const player = {
+  x: 200,
+  y: 200,
+  size: 32,
+  speed: 3
+};
 
-  let buildings = {
-    fire: false,
-    workbench: false
-  };
+/* === MAP OBJECTS === */
+const trees = [];
+for (let i = 0; i < 20; i++) {
+  trees.push({
+    x: Math.random() * 2000,
+    y: Math.random() * 2000,
+    size: 40
+  });
+}
 
-  // === RENDER ===
-  function render() {
-    const game = document.getElementById("game");
+/* === CAMERA === */
+let camX = 0;
+let camY = 0;
 
-    if (location === "base") {
-      game.innerHTML = `
-        <h2>🏠 Твоя база</h2>
+/* === INPUT === */
+const keys = {};
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
 
-        <div class="card">
-          ❤️ HP: ${stats.hp}<br>
-          🍖 Голод: ${stats.hunger}<br>
-          ⚡ Энергия: ${stats.energy}
-        </div>
+/* === GAME LOOP === */
+function update() {
+  if (keys["w"]) player.y -= player.speed;
+  if (keys["s"]) player.y += player.speed;
+  if (keys["a"]) player.x -= player.speed;
+  if (keys["d"]) player.x += player.speed;
 
-        <div class="card">
-          🪵 Дерево: ${resources.wood}
-        </div>
+  camX = player.x - canvas.width / 2;
+  camY = player.y - canvas.height / 2;
+}
 
-        <div class="card">
-          🔥 Костёр: <b>${buildings.fire ? "построен" : "не построен"}</b><br>
-          🛠 Верстак: <b>${buildings.workbench ? "построен" : "не построен"}</b>
-        </div>
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        <button onclick="goForest()">🌲 Выйти в лес</button>
+  // ground
+  ctx.fillStyle = "#2e7d32";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        <button onclick="buildFire()">🔥 Построить костёр (5 дерева)</button>
+  // trees
+  ctx.fillStyle = "#1b5e20";
+  trees.forEach(t => {
+    ctx.fillRect(
+      t.x - camX,
+      t.y - camY,
+      t.size,
+      t.size
+    );
+  });
 
-        <div class="log" id="log"></div>
-      `;
-    }
+  // player
+  ctx.fillStyle = "#ffca28";
+  ctx.fillRect(
+    player.x - camX,
+    player.y - camY,
+    player.size,
+    player.size
+  );
+}
 
-    if (location === "forest") {
-      game.innerHTML = `
-        <h2>🌲 Лес</h2>
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
 
-        <div class="card">
-          Ты в лесу. Можно добывать ресурсы.
-        </div>
-
-        <button onclick="chopWood()">🪓 Рубить дерево</button>
-        <button onclick="returnBase()">🏠 Вернуться на базу</button>
-
-        <div class="log" id="log"></div>
-      `;
-    }
-  }
-
-  // === ACTIONS ===
-  function goForest() {
-    location = "forest";
-    render();
-  }
-
-  function returnBase() {
-    location = "base";
-    render();
-  }
-
-  function chopWood() {
-    const gain = Math.floor(Math.random() * 3) + 1;
-    resources.wood += gain;
-    stats.energy -= 5;
-    stats.hunger -= 3;
-
-    document.getElementById("log").textContent =
-      `Ты добыл ${gain} дерева`;
-
-    checkStats();
-  }
-
-  function buildFire() {
-    if (buildings.fire) {
-      log("Костёр уже построен");
-      return;
-    }
-
-    if (resources.wood < 5) {
-      log("Недостаточно дерева");
-      return;
-    }
-
-    resources.wood -= 5;
-    buildings.fire = true;
-    log("Ты построил костёр 🔥");
-    render();
-  }
-
-  function checkStats() {
-    if (stats.energy < 0) stats.energy = 0;
-    if (stats.hunger < 0) stats.hunger = 0;
-
-    if (stats.energy === 0 || stats.hunger === 0) {
-      stats.hp -= 10;
-    }
-
-    if (stats.hp <= 0) {
-      document.getElementById("game").innerHTML = `
-        <h2>☠️ Ты умер</h2>
-        <p>Выживание не удалось</p>
-      `;
-      return;
-    }
-
-    render();
-  }
-
-  function log(text) {
-    const el = document.getElementById("log");
-    if (el) el.textContent = text;
-  }
-
-  // === START ===
-  render();
+loop();
 </script>
 
 </body>
