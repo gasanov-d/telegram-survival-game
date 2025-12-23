@@ -3,21 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Survival Game</title>
+<title>Survival World</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
-html,body{margin:0;padding:0;overflow:hidden;background:#2e7d32;font-family:Arial}
-canvas{display:block}
-#ui{position:fixed;top:10px;left:10px;color:#fff;font-size:14px}
-#inv{margin-top:5px}
-#btns{position:fixed;bottom:40px;right:30px}
-.btn{width:70px;height:70px;border-radius:50%;background:#d32f2f;color:#fff;
-display:flex;align-items:center;justify-content:center;margin-top:10px}
-#joy{position:fixed;bottom:40px;left:30px;width:120px;height:120px;border-radius:50%;
-background:rgba(0,0,0,.3)}
-#stick{width:50px;height:50px;border-radius:50%;background:#fff;position:absolute;left:35px;top:35px}
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #1b5e20;
+}
+canvas { display: block; }
+
+/* Джойстик */
+#joystick {
+  position: fixed;
+  bottom: 40px;
+  left: 40px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.35);
+}
+#stick {
+  position: absolute;
+  left: 35px;
+  top: 35px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #fff;
+}
 </style>
 </head>
 
@@ -25,98 +42,184 @@ background:rgba(0,0,0,.3)}
 
 <canvas id="game"></canvas>
 
-<div id="ui">
-  ❤️ <span id="hp"></span>
-  <div id="inv"></div>
-</div>
-
-<div id="joy"><div id="stick"></div></div>
-
-<div id="btns">
-  <div class="btn" id="hit">УДАР</div>
-  <div class="btn" id="base">БАЗА</div>
+<div id="joystick">
+  <div id="stick"></div>
 </div>
 
 <script>
+/* === TELEGRAM === */
 const tg = window.Telegram.WebApp;
-tg.ready(); tg.expand();
+tg.ready();
+tg.expand();
 
-const c = document.getElementById("game"), ctx=c.getContext("2d");
-c.width=innerWidth; c.height=innerHeight;
+/* === CANVAS === */
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-const world={w:3000,h:3000};
-const player={x:1500,y:1500,s:28,spd:4,dx:0,dy:0,hp:100};
-let mode="world";
+function resize() {
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+}
+resize();
+addEventListener("resize", resize);
 
-let inv=JSON.parse(localStorage.getItem("inv"))||{wood:0,stone:0,fire:false};
-
-const objs=[];
-for(let i=0;i<20;i++)objs.push({x:Math.random()*world.w,y:Math.random()*world.h,t:"wood",hp:3});
-for(let i=0;i<15;i++)objs.push({x:Math.random()*world.w,y:Math.random()*world.h,t:"stone",hp:4});
-
-const joy=document.getElementById("joy"),stick=document.getElementById("stick");
-let drag=false;
-joy.ontouchstart=()=>drag=true;
-joy.ontouchend=()=>{drag=false;stick.style.left="35px";stick.style.top="35px";player.dx=player.dy=0}
-joy.ontouchmove=e=>{
-if(!drag)return;
-let r=joy.getBoundingClientRect(),t=e.touches[0];
-let dx=t.clientX-r.left-60,dy=t.clientY-r.top-60;
-let d=Math.hypot(dx,dy);if(d>40){dx*=40/d;dy*=40/d}
-stick.style.left=dx+60-25+"px";stick.style.top=dy+60-25+"px";
-player.dx=dx/40;player.dy=dy/40;
+/* === WORLD === */
+const world = {
+  width: 3000,
+  height: 3000
 };
 
-document.getElementById("hit").onclick=()=>{
-objs.forEach(o=>{
-if(o.hp<=0)return;
-if(Math.hypot(player.x-o.x,player.y-o.y)<60){
-o.hp--;
-if(o.hp<=0){
-inv[o.t]++; save();
+/* === PLAYER === */
+const player = {
+  x: world.width / 2,
+  y: world.height / 2,
+  size: 28,
+  speed: 4,
+  dx: 0,
+  dy: 0
+};
+
+/* === CAMERA === */
+const camera = { x: 0, y: 0 };
+
+/* === OBJECTS === */
+const trees = [];
+for (let i = 0; i < 30; i++) {
+  trees.push({
+    x: Math.random() * world.width,
+    y: Math.random() * world.height,
+    size: 40
+  });
 }
+
+const mountains = [];
+for (let i = 0; i < 15; i++) {
+  mountains.push({
+    x: Math.random() * world.width,
+    y: Math.random() * world.height,
+    size: 100
+  });
 }
+
+const npcs = [
+  { x: 1400, y: 1500, size: 26, dir: 1 },
+  { x: 1600, y: 1450, size: 26, dir: -1 }
+];
+
+/* === JOYSTICK === */
+const joystick = document.getElementById("joystick");
+const stick = document.getElementById("stick");
+let dragging = false;
+
+joystick.addEventListener("touchstart", () => dragging = true);
+joystick.addEventListener("touchend", () => {
+  dragging = false;
+  stick.style.left = "35px";
+  stick.style.top = "35px";
+  player.dx = player.dy = 0;
 });
-};
 
-document.getElementById("base").onclick=()=>{
-mode=mode==="world"?"base":"world";
-};
+joystick.addEventListener("touchmove", e => {
+  if (!dragging) return;
+  const rect = joystick.getBoundingClientRect();
+  const t = e.touches[0];
 
-function save(){localStorage.setItem("inv",JSON.stringify(inv))}
+  let dx = t.clientX - rect.left - 60;
+  let dy = t.clientY - rect.top - 60;
+  const dist = Math.hypot(dx, dy);
+  const max = 40;
 
-function draw(){
-ctx.clearRect(0,0,c.width,c.height);
-if(mode==="world"){
-ctx.fillStyle="#388e3c";ctx.fillRect(0,0,c.width,c.height);
-objs.forEach(o=>{
-if(o.hp<=0)return;
-ctx.fillStyle=o.t==="wood"?"#1b5e20":"#757575";
-ctx.fillRect(o.x-player.x+c.width/2,o.y-player.y+c.height/2,40,40);
+  if (dist > max) {
+    dx *= max / dist;
+    dy *= max / dist;
+  }
+
+  stick.style.left = dx + 60 - 25 + "px";
+  stick.style.top = dy + 60 - 25 + "px";
+
+  player.dx = dx / max;
+  player.dy = dy / max;
 });
-ctx.fillStyle="#ffeb3b";
-ctx.fillRect(c.width/2-player.s/2,c.height/2-player.s/2,player.s,player.s);
-}else{
-ctx.fillStyle="#263238";ctx.fillRect(0,0,c.width,c.height);
-ctx.fillStyle="#fff";ctx.fillText("🏠 БАЗА",c.width/2-30,80);
-ctx.fillText(`Дерево: ${inv.wood}`,c.width/2-50,120);
-ctx.fillText(`Камень: ${inv.stone}`,c.width/2-50,150);
-if(!inv.fire&&inv.wood>=5){
-ctx.fillText("Нажми УДАР чтобы построить костёр",c.width/2-120,200);
-}
-}
-document.getElementById("hp").textContent=player.hp;
-document.getElementById("inv").innerHTML=`🪵${inv.wood} ⛏${inv.stone} 🔥${inv.fire?"✔":""}`;
+
+/* === COLLISION === */
+function blocked(nx, ny) {
+  return mountains.some(m =>
+    Math.abs(nx - m.x) < m.size / 2 &&
+    Math.abs(ny - m.y) < m.size / 2
+  );
 }
 
-function update(){
-if(mode==="world"){
-player.x+=player.dx*player.spd;
-player.y+=player.dy*player.spd;
-}
+/* === UPDATE === */
+function update() {
+  const nx = player.x + player.dx * player.speed;
+  const ny = player.y + player.dy * player.speed;
+
+  if (!blocked(nx, ny)) {
+    player.x = Math.max(0, Math.min(world.width, nx));
+    player.y = Math.max(0, Math.min(world.height, ny));
+  }
+
+  npcs.forEach(n => {
+    n.x += Math.sin(Date.now() / 800) * 0.6;
+  });
+
+  camera.x = player.x - canvas.width / 2;
+  camera.y = player.y - canvas.height / 2;
 }
 
-function loop(){update();draw();requestAnimationFrame(loop)}
+/* === DRAW === */
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  /* ground */
+  ctx.fillStyle = "#2e7d32";
+  ctx.fillRect(-camera.x, -camera.y, world.width, world.height);
+
+  /* mountains */
+  ctx.fillStyle = "#5d4037";
+  mountains.forEach(m => {
+    ctx.fillRect(
+      m.x - camera.x - m.size / 2,
+      m.y - camera.y - m.size / 2,
+      m.size, m.size
+    );
+  });
+
+  /* trees */
+  ctx.fillStyle = "#1b5e20";
+  trees.forEach(t => {
+    ctx.fillRect(
+      t.x - camera.x - t.size / 2,
+      t.y - camera.y - t.size / 2,
+      t.size, t.size
+    );
+  });
+
+  /* NPCs */
+  ctx.fillStyle = "#03a9f4";
+  npcs.forEach(n => {
+    ctx.fillRect(
+      n.x - camera.x - n.size / 2,
+      n.y - camera.y - n.size / 2,
+      n.size, n.size
+    );
+  });
+
+  /* player */
+  ctx.fillStyle = "#ffeb3b";
+  ctx.fillRect(
+    player.x - camera.x - player.size / 2,
+    player.y - camera.y - player.size / 2,
+    player.size, player.size
+  );
+}
+
+/* === LOOP === */
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
 loop();
 </script>
 
