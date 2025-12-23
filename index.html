@@ -1,106 +1,201 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>Survival Base</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <meta charset="UTF-8">
+  <title>Last Island Survival (Demo)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<style>
-body {
-  margin: 0;
-  background: #111;
-  color: #fff;
-  font-family: Arial, sans-serif;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-}
-#game {
-  width: 90%;
-  max-width: 420px;
-  text-align: center;
-}
-button {
-  width: 100%;
-  padding: 14px;
-  margin: 6px 0;
-  font-size: 16px;
-  border: none;
-  border-radius: 8px;
-  background: #2a9df4;
-  color: white;
-}
-.card {
-  background: #1c1c1c;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-}
-</style>
+  <!-- Telegram WebApp -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      background: #0f1115;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #game {
+      width: 90%;
+      max-width: 420px;
+      text-align: center;
+    }
+
+    .card {
+      background: #1c1f26;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin: 6px 0;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      background: #2a9df4;
+      color: #fff;
+    }
+
+    button:active {
+      opacity: 0.8;
+    }
+
+    .log {
+      margin-top: 10px;
+      min-height: 24px;
+      color: #9ad1ff;
+    }
+  </style>
 </head>
-
 <body>
-<div id="game">
 
-<h2>🏠 Твоя база</h2>
-
-<div class="card" id="fireplace">
-🔥 Костёр: <b>не построен</b>
-</div>
-
-<div class="card" id="workbench">
-🛠 Верстак: <b>не построен</b>
-</div>
-
-<button onclick="buildFire()">🔥 Построить костёр (5 дерева)</button>
-
-<div class="card">
-📦 Ресурсы:<br>
-🪵 Дерево: <span id="wood">10</span>
-</div>
-
-<p id="log"></p>
-
-</div>
+<div id="game"></div>
 
 <script>
-const tg = window.Telegram.WebApp;
-tg.ready();
-tg.expand();
+  // === TELEGRAM INIT ===
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+  tg.expand();
 
-let wood = 10;
-let fireBuilt = false;
+  // === GAME STATE ===
+  let location = "base";
 
-function update() {
-  document.getElementById("wood").textContent = wood;
-  document.getElementById("fireplace").innerHTML =
-    fireBuilt
-      ? "🔥 Костёр: <b>построен</b>"
-      : "🔥 Костёр: <b>не построен</b>";
-}
+  let stats = {
+    hp: 100,
+    hunger: 100,
+    energy: 100
+  };
 
-function buildFire() {
-  if (fireBuilt) {
-    log("Костёр уже построен");
-    return;
+  let resources = {
+    wood: 0
+  };
+
+  let buildings = {
+    fire: false,
+    workbench: false
+  };
+
+  // === RENDER ===
+  function render() {
+    const game = document.getElementById("game");
+
+    if (location === "base") {
+      game.innerHTML = `
+        <h2>🏠 Твоя база</h2>
+
+        <div class="card">
+          ❤️ HP: ${stats.hp}<br>
+          🍖 Голод: ${stats.hunger}<br>
+          ⚡ Энергия: ${stats.energy}
+        </div>
+
+        <div class="card">
+          🪵 Дерево: ${resources.wood}
+        </div>
+
+        <div class="card">
+          🔥 Костёр: <b>${buildings.fire ? "построен" : "не построен"}</b><br>
+          🛠 Верстак: <b>${buildings.workbench ? "построен" : "не построен"}</b>
+        </div>
+
+        <button onclick="goForest()">🌲 Выйти в лес</button>
+
+        <button onclick="buildFire()">🔥 Построить костёр (5 дерева)</button>
+
+        <div class="log" id="log"></div>
+      `;
+    }
+
+    if (location === "forest") {
+      game.innerHTML = `
+        <h2>🌲 Лес</h2>
+
+        <div class="card">
+          Ты в лесу. Можно добывать ресурсы.
+        </div>
+
+        <button onclick="chopWood()">🪓 Рубить дерево</button>
+        <button onclick="returnBase()">🏠 Вернуться на базу</button>
+
+        <div class="log" id="log"></div>
+      `;
+    }
   }
-  if (wood < 5) {
-    log("Недостаточно дерева");
-    return;
+
+  // === ACTIONS ===
+  function goForest() {
+    location = "forest";
+    render();
   }
-  wood -= 5;
-  fireBuilt = true;
-  log("Ты построил костёр 🔥");
-  update();
-}
 
-function log(text) {
-  document.getElementById("log").textContent = text;
-}
+  function returnBase() {
+    location = "base";
+    render();
+  }
 
-update();
+  function chopWood() {
+    const gain = Math.floor(Math.random() * 3) + 1;
+    resources.wood += gain;
+    stats.energy -= 5;
+    stats.hunger -= 3;
+
+    document.getElementById("log").textContent =
+      `Ты добыл ${gain} дерева`;
+
+    checkStats();
+  }
+
+  function buildFire() {
+    if (buildings.fire) {
+      log("Костёр уже построен");
+      return;
+    }
+
+    if (resources.wood < 5) {
+      log("Недостаточно дерева");
+      return;
+    }
+
+    resources.wood -= 5;
+    buildings.fire = true;
+    log("Ты построил костёр 🔥");
+    render();
+  }
+
+  function checkStats() {
+    if (stats.energy < 0) stats.energy = 0;
+    if (stats.hunger < 0) stats.hunger = 0;
+
+    if (stats.energy === 0 || stats.hunger === 0) {
+      stats.hp -= 10;
+    }
+
+    if (stats.hp <= 0) {
+      document.getElementById("game").innerHTML = `
+        <h2>☠️ Ты умер</h2>
+        <p>Выживание не удалось</p>
+      `;
+      return;
+    }
+
+    render();
+  }
+
+  function log(text) {
+    const el = document.getElementById("log");
+    if (el) el.textContent = text;
+  }
+
+  // === START ===
+  render();
 </script>
 
 </body>
