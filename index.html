@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Survival</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      background: #0f0f0f;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .screen {
+      text-align: center;
+    }
+    button {
+      padding: 14px 28px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      background: #1e90ff;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="screen">
+    <h1>🌲 Survival</h1>
+    <p>Web App работает</p>
+    <button onclick="start()">Начать</button>
+  </div>
+
+  <script>
+    function start() {
+      document.querySelector('.screen').innerHTML =
+        '<h2>Игра запущена</h2><p>Это Web App внутри Telegram</p>';
+    }
+  </script>
+</body>
+</html>
