@@ -2,8 +2,8 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Survival</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
@@ -11,98 +11,145 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: #000;
   overflow: hidden;
+  background: #2e7d32;
 }
 
 canvas {
   display: block;
-  background: #2e7d32;
+}
+
+/* Джойстик */
+#joystick {
+  position: fixed;
+  bottom: 40px;
+  left: 40px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.3);
+  touch-action: none;
+}
+
+#stick {
+  position: absolute;
+  left: 35px;
+  top: 35px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
 }
 </style>
 </head>
+
 <body>
 
 <canvas id="game"></canvas>
 
+<div id="joystick">
+  <div id="stick"></div>
+</div>
+
 <script>
-/* === TELEGRAM === */
 const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
 
-/* === CANVAS === */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-resize();
-window.addEventListener("resize", resize);
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-/* === PLAYER === */
-const player = {
-  x: 200,
-  y: 200,
-  size: 32,
-  speed: 3
+// МИР
+const world = {
+  width: 3000,
+  height: 3000
 };
 
-/* === MAP OBJECTS === */
-const trees = [];
-for (let i = 0; i < 20; i++) {
-  trees.push({
-    x: Math.random() * 2000,
-    y: Math.random() * 2000,
-    size: 40
-  });
-}
+// ИГРОК
+const player = {
+  x: world.width / 2,
+  y: world.height / 2,
+  size: 30,
+  speed: 4,
+  dx: 0,
+  dy: 0
+};
 
-/* === CAMERA === */
-let camX = 0;
-let camY = 0;
+// КАМЕРА
+const camera = {
+  x: 0,
+  y: 0
+};
 
-/* === INPUT === */
-const keys = {};
-document.addEventListener("keydown", e => keys[e.key] = true);
-document.addEventListener("keyup", e => keys[e.key] = false);
+// ДЖОЙСТИК
+const joystick = document.getElementById("joystick");
+const stick = document.getElementById("stick");
 
-/* === GAME LOOP === */
+let dragging = false;
+let center = { x: 60, y: 60 };
+
+joystick.addEventListener("touchstart", () => dragging = true);
+joystick.addEventListener("touchend", () => {
+  dragging = false;
+  stick.style.left = "35px";
+  stick.style.top = "35px";
+  player.dx = 0;
+  player.dy = 0;
+});
+
+joystick.addEventListener("touchmove", e => {
+  if (!dragging) return;
+  const rect = joystick.getBoundingClientRect();
+  const touch = e.touches[0];
+
+  let x = touch.clientX - rect.left;
+  let y = touch.clientY - rect.top;
+
+  let dx = x - center.x;
+  let dy = y - center.y;
+  let dist = Math.hypot(dx, dy);
+  let max = 40;
+
+  if (dist > max) {
+    dx *= max / dist;
+    dy *= max / dist;
+  }
+
+  stick.style.left = `${center.x + dx - 25}px`;
+  stick.style.top = `${center.y + dy - 25}px`;
+
+  player.dx = dx / max;
+  player.dy = dy / max;
+});
+
+// ИГРОВОЙ ЦИКЛ
 function update() {
-  if (keys["w"]) player.y -= player.speed;
-  if (keys["s"]) player.y += player.speed;
-  if (keys["a"]) player.x -= player.speed;
-  if (keys["d"]) player.x += player.speed;
+  player.x += player.dx * player.speed;
+  player.y += player.dy * player.speed;
 
-  camX = player.x - canvas.width / 2;
-  camY = player.y - canvas.height / 2;
+  // ГРАНИЦЫ
+  player.x = Math.max(0, Math.min(world.width, player.x));
+  player.y = Math.max(0, Math.min(world.height, player.y));
+
+  camera.x = player.x - canvas.width / 2;
+  camera.y = player.y - canvas.height / 2;
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // ground
-  ctx.fillStyle = "#2e7d32";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // ФОН
+  ctx.fillStyle = "#388e3c";
+  ctx.fillRect(-camera.x, -camera.y, world.width, world.height);
 
-  // trees
-  ctx.fillStyle = "#1b5e20";
-  trees.forEach(t => {
-    ctx.fillRect(
-      t.x - camX,
-      t.y - camY,
-      t.size,
-      t.size
-    );
-  });
-
-  // player
-  ctx.fillStyle = "#ffca28";
+  // ИГРОК
+  ctx.fillStyle = "#ffeb3b";
   ctx.fillRect(
-    player.x - camX,
-    player.y - camY,
+    player.x - camera.x - player.size / 2,
+    player.y - camera.y - player.size / 2,
     player.size,
     player.size
   );
