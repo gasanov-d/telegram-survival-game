@@ -3,38 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Survival World</title>
+<title>Survival Build</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
-html, body {
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  background: #1b5e20;
-}
-canvas { display: block; }
+html,body{margin:0;padding:0;overflow:hidden;background:#2e7d32;font-family:Arial}
+canvas{display:block}
 
-/* Джойстик */
-#joystick {
-  position: fixed;
-  bottom: 40px;
-  left: 40px;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.35);
+/* UI */
+#top{position:fixed;top:10px;left:10px;color:#fff;z-index:10}
+#buttons{position:fixed;bottom:40px;right:30px;z-index:10}
+.btn{
+  width:80px;height:80px;border-radius:50%;
+  background:#37474f;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  margin-top:10px;font-weight:bold
 }
-#stick {
-  position: absolute;
-  left: 35px;
-  top: 35px;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: #fff;
-}
+.btn.active{background:#ff9800}
+
+/* Joystick */
+#joy{position:fixed;bottom:40px;left:30px;width:120px;height:120px;border-radius:50%;background:rgba(0,0,0,.3);z-index:10}
+#stick{width:50px;height:50px;border-radius:50%;background:#fff;position:absolute;left:35px;top:35px}
 </style>
 </head>
 
@@ -42,184 +32,133 @@ canvas { display: block; }
 
 <canvas id="game"></canvas>
 
-<div id="joystick">
-  <div id="stick"></div>
+<div id="top">🪵 <span id="wood">20</span></div>
+
+<div id="joy"><div id="stick"></div></div>
+
+<div id="buttons">
+  <div class="btn" id="foundation">ФУНД</div>
+  <div class="btn" id="wall">СТЕНА</div>
 </div>
 
 <script>
-/* === TELEGRAM === */
-const tg = window.Telegram.WebApp;
-tg.ready();
-tg.expand();
+const tg=window.Telegram.WebApp;tg.ready();tg.expand();
+const c=document.getElementById("game"),ctx=c.getContext("2d");
+c.width=innerWidth;c.height=innerHeight;
 
-/* === CANVAS === */
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const GRID=50;
+const world={w:3000,h:3000};
+const player={x:1500,y:1500,s:28,spd:4,dx:0,dy:0};
+const cam={x:0,y:0};
 
-function resize() {
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
-}
-resize();
-addEventListener("resize", resize);
+let wood=20;
+let mode=null; // foundation | wall
 
-/* === WORLD === */
-const world = {
-  width: 3000,
-  height: 3000
+const foundations=[];
+const walls=[];
+
+/* GRID HELPERS */
+function snap(v){return Math.floor(v/GRID)*GRID+GRID/2}
+function cellKey(x,y){return `${x}_${y}`}
+
+/* JOYSTICK */
+const joy=document.getElementById("joy"),stick=document.getElementById("stick");
+let drag=false;
+joy.ontouchstart=()=>drag=true;
+joy.ontouchend=()=>{drag=false;stick.style.left="35px";stick.style.top="35px";player.dx=player.dy=0}
+joy.ontouchmove=e=>{
+if(!drag)return;
+let r=joy.getBoundingClientRect(),t=e.touches[0];
+let dx=t.clientX-r.left-60,dy=t.clientY-r.top-60;
+let d=Math.hypot(dx,dy);if(d>40){dx*=40/d;dy*=40/d}
+stick.style.left=dx+60-25+"px";stick.style.top=dy+60-25+"px";
+player.dx=dx/40;player.dy=dy/40;
 };
 
-/* === PLAYER === */
-const player = {
-  x: world.width / 2,
-  y: world.height / 2,
-  size: 28,
-  speed: 4,
-  dx: 0,
-  dy: 0
+/* BUTTONS */
+document.getElementById("foundation").onclick=()=>modeToggle("foundation");
+document.getElementById("wall").onclick=()=>modeToggle("wall");
+
+function modeToggle(m){
+  mode = mode===m ? null : m;
+  document.querySelectorAll(".btn").forEach(b=>b.classList.remove("active"));
+  if(mode) document.getElementById(m).classList.add("active");
+}
+
+/* PLACE */
+c.onclick=()=>{
+if(!mode)return;
+if(wood<5)return;
+
+const gx=snap(player.x), gy=snap(player.y);
+const key=cellKey(gx,gy);
+
+if(mode==="foundation"){
+if(foundations.some(f=>f.key===key))return;
+foundations.push({x:gx,y:gy,key});
+wood-=5;
+}
+
+if(mode==="wall"){
+if(!foundations.some(f=>f.key===key))return;
+if(walls.some(w=>w.key===key))return;
+walls.push({x:gx,y:gy,key});
+wood-=2;
+}
+
+document.getElementById("wood").textContent=wood;
 };
 
-/* === CAMERA === */
-const camera = { x: 0, y: 0 };
-
-/* === OBJECTS === */
-const trees = [];
-for (let i = 0; i < 30; i++) {
-  trees.push({
-    x: Math.random() * world.width,
-    y: Math.random() * world.height,
-    size: 40
-  });
+/* UPDATE */
+function update(){
+player.x+=player.dx*player.spd;
+player.y+=player.dy*player.spd;
+cam.x=player.x-c.width/2;
+cam.y=player.y-c.height/2;
 }
 
-const mountains = [];
-for (let i = 0; i < 15; i++) {
-  mountains.push({
-    x: Math.random() * world.width,
-    y: Math.random() * world.height,
-    size: 100
-  });
+/* DRAW */
+function draw(){
+ctx.clearRect(0,0,c.width,c.height);
+ctx.fillStyle="#388e3c";
+ctx.fillRect(-cam.x,-cam.y,world.w,world.h);
+
+/* grid */
+ctx.strokeStyle="rgba(255,255,255,.1)";
+for(let x=0;x<world.w;x+=GRID){
+ctx.beginPath();ctx.moveTo(x-cam.x,0-cam.y);ctx.lineTo(x-cam.x,world.h-cam.y);ctx.stroke();
+}
+for(let y=0;y<world.h;y+=GRID){
+ctx.beginPath();ctx.moveTo(0-cam.x,y-cam.y);ctx.lineTo(world.w-cam.x,y-cam.y);ctx.stroke();
 }
 
-const npcs = [
-  { x: 1400, y: 1500, size: 26, dir: 1 },
-  { x: 1600, y: 1450, size: 26, dir: -1 }
-];
-
-/* === JOYSTICK === */
-const joystick = document.getElementById("joystick");
-const stick = document.getElementById("stick");
-let dragging = false;
-
-joystick.addEventListener("touchstart", () => dragging = true);
-joystick.addEventListener("touchend", () => {
-  dragging = false;
-  stick.style.left = "35px";
-  stick.style.top = "35px";
-  player.dx = player.dy = 0;
+/* foundations */
+ctx.fillStyle="#8d6e63";
+foundations.forEach(f=>{
+ctx.fillRect(f.x-cam.x-GRID/2,f.y-cam.y-GRID/2,GRID,GRID);
 });
 
-joystick.addEventListener("touchmove", e => {
-  if (!dragging) return;
-  const rect = joystick.getBoundingClientRect();
-  const t = e.touches[0];
-
-  let dx = t.clientX - rect.left - 60;
-  let dy = t.clientY - rect.top - 60;
-  const dist = Math.hypot(dx, dy);
-  const max = 40;
-
-  if (dist > max) {
-    dx *= max / dist;
-    dy *= max / dist;
-  }
-
-  stick.style.left = dx + 60 - 25 + "px";
-  stick.style.top = dy + 60 - 25 + "px";
-
-  player.dx = dx / max;
-  player.dy = dy / max;
+/* walls */
+ctx.fillStyle="#5d4037";
+walls.forEach(w=>{
+ctx.fillRect(w.x-cam.x-GRID/2,w.y-cam.y-GRID/2,GRID,GRID/2);
 });
 
-/* === COLLISION === */
-function blocked(nx, ny) {
-  return mountains.some(m =>
-    Math.abs(nx - m.x) < m.size / 2 &&
-    Math.abs(ny - m.y) < m.size / 2
-  );
+/* ghost */
+if(mode){
+ctx.globalAlpha=.5;
+const gx=snap(player.x), gy=snap(player.y);
+ctx.fillStyle=mode==="foundation"?"#8d6e63":"#5d4037";
+ctx.fillRect(gx-cam.x-GRID/2,gy-cam.y-GRID/2,GRID,GRID);
+ctx.globalAlpha=1;
 }
 
-/* === UPDATE === */
-function update() {
-  const nx = player.x + player.dx * player.speed;
-  const ny = player.y + player.dy * player.speed;
-
-  if (!blocked(nx, ny)) {
-    player.x = Math.max(0, Math.min(world.width, nx));
-    player.y = Math.max(0, Math.min(world.height, ny));
-  }
-
-  npcs.forEach(n => {
-    n.x += Math.sin(Date.now() / 800) * 0.6;
-  });
-
-  camera.x = player.x - canvas.width / 2;
-  camera.y = player.y - canvas.height / 2;
+/* player */
+ctx.fillStyle="#ffeb3b";
+ctx.fillRect(c.width/2-player.s/2,c.height/2-player.s/2,player.s,player.s);
 }
 
-/* === DRAW === */
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  /* ground */
-  ctx.fillStyle = "#2e7d32";
-  ctx.fillRect(-camera.x, -camera.y, world.width, world.height);
-
-  /* mountains */
-  ctx.fillStyle = "#5d4037";
-  mountains.forEach(m => {
-    ctx.fillRect(
-      m.x - camera.x - m.size / 2,
-      m.y - camera.y - m.size / 2,
-      m.size, m.size
-    );
-  });
-
-  /* trees */
-  ctx.fillStyle = "#1b5e20";
-  trees.forEach(t => {
-    ctx.fillRect(
-      t.x - camera.x - t.size / 2,
-      t.y - camera.y - t.size / 2,
-      t.size, t.size
-    );
-  });
-
-  /* NPCs */
-  ctx.fillStyle = "#03a9f4";
-  npcs.forEach(n => {
-    ctx.fillRect(
-      n.x - camera.x - n.size / 2,
-      n.y - camera.y - n.size / 2,
-      n.size, n.size
-    );
-  });
-
-  /* player */
-  ctx.fillStyle = "#ffeb3b";
-  ctx.fillRect(
-    player.x - camera.x - player.size / 2,
-    player.y - camera.y - player.size / 2,
-    player.size, player.size
-  );
-}
-
-/* === LOOP === */
-function loop() {
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
+function loop(){update();draw();requestAnimationFrame(loop)}
 loop();
 </script>
 
