@@ -2,72 +2,181 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<title>Survival</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Survival Phaser</title>
-<script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-html,body{margin:0;padding:0;background:#000}
+body {
+  margin:0;
+  background:#111;
+  color:#fff;
+  font-family:Arial;
+  overflow:hidden;
+}
+#ui {
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  background:#000a;
+  padding:6px;
+}
+button {
+  margin:3px;
+  padding:10px;
+  background:#2a9df4;
+  border:none;
+  border-radius:6px;
+  color:white;
+  font-size:14px;
+}
+canvas {
+  display:block;
+}
 </style>
 </head>
 <body>
 
+<canvas id="game"></canvas>
+
+<div id="ui">
+  ❤️ HP: <span id="hp"></span>
+  🌲 Wood: <span id="wood"></span>
+  ⛰ Stone: <span id="stone"></span><br>
+  <button onclick="buildHouse()">🏠 Дом (10🌲)</button>
+  <button onclick="buildFire()">🔥 Костёр (5🌲)</button>
+</div>
+
 <script>
-const config = {
-  type: Phaser.AUTO,
-  width: window.innerWidth,
-  height: window.innerHeight,
-  physics: {
-    default: "arcade",
-    arcade: { gravity: { y: 0 }, debug: false }
-  },
-  scene: { preload, create, update }
+const tg = window.Telegram.WebApp;
+tg.ready(); tg.expand();
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+
+const TILE = 32;
+const MAP_W = 50;
+const MAP_H = 50;
+
+let camera = {x:0,y:0};
+
+const player = {
+  x: 25, y: 25,
+  hp: 100,
+  wood: 0,
+  stone: 0
 };
 
-const game = new Phaser.Game(config);
+const map = [];
+const objects = [];
+const enemies = [];
 
-let player, cursors;
-
-function preload() {
-  this.load.image("player","https://labs.phaser.io/assets/sprites/phaser-dude.png");
-  this.load.image("tile","https://labs.phaser.io/assets/tilemaps/tiles/grass-tiles-2-small.png");
+for(let y=0;y<MAP_H;y++){
+  map[y]=[];
+  for(let x=0;x<MAP_W;x++){
+    map[y][x]=Math.random()<0.1?"water":"grass";
+    if(Math.random()<0.08) objects.push({type:"tree",x,y,hp:3});
+    if(Math.random()<0.05) objects.push({type:"stone",x,y,hp:4});
+  }
 }
 
-function create() {
-  // МИР
-  const worldWidth = 3000;
-  const worldHeight = 3000;
-  this.physics.world.setBounds(0,0,worldWidth,worldHeight);
+for(let i=0;i<10;i++){
+  enemies.push({x:Math.random()*MAP_W,y:Math.random()*MAP_H,hp:20});
+}
 
-  // ФОН (ландшафт)
-  for(let x=0;x<worldWidth;x+=64){
-    for(let y=0;y<worldHeight;y+=64){
-      this.add.image(x,y,"tile").setOrigin(0);
+const keys = {};
+addEventListener("keydown",e=>keys[e.key]=true);
+addEventListener("keyup",e=>keys[e.key]=false);
+
+function buildHouse(){
+  if(player.wood>=10){
+    player.wood-=10;
+    objects.push({type:"house",x:player.x,y:player.y});
+  }
+}
+
+function buildFire(){
+  if(player.wood>=5){
+    player.wood-=5;
+    objects.push({type:"fire",x:player.x,y:player.y});
+  }
+}
+
+function update(){
+  let dx=0,dy=0;
+  if(keys["w"])dy--;
+  if(keys["s"])dy++;
+  if(keys["a"])dx--;
+  if(keys["d"])dx++;
+  player.x+=dx*0.1;
+  player.y+=dy*0.1;
+
+  camera.x = player.x*TILE - canvas.width/2;
+  camera.y = player.y*TILE - canvas.height/2;
+
+  objects.forEach(o=>{
+    if(Math.abs(o.x-player.x)<1 && Math.abs(o.y-player.y)<1 && o.hp){
+      if(keys[" "]){
+        o.hp--;
+        if(o.type=="tree") player.wood++;
+        if(o.type=="stone") player.stone++;
+      }
+    }
+  });
+
+  enemies.forEach(e=>{
+    const dx=player.x-e.x, dy=player.y-e.y;
+    const d=Math.hypot(dx,dy);
+    if(d<5){
+      e.x+=dx/d*0.01;
+      e.y+=dy/d*0.01;
+    }
+    if(d<1){
+      player.hp--;
+    }
+  });
+
+  document.getElementById("hp").textContent = player.hp;
+  document.getElementById("wood").textContent = player.wood;
+  document.getElementById("stone").textContent = player.stone;
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  for(let y=0;y<MAP_H;y++){
+    for(let x=0;x<MAP_W;x++){
+      ctx.fillStyle = map[y][x]=="grass"?"#1c7":"#246";
+      ctx.fillRect(x*TILE-camera.x,y*TILE-camera.y,TILE,TILE);
     }
   }
 
-  // ИГРОК
-  player = this.physics.add.sprite(1500,1500,"player");
-  player.setScale(0.7);
-  player.setCollideWorldBounds(true);
+  objects.forEach(o=>{
+    ctx.fillStyle =
+      o.type=="tree"?"#070":
+      o.type=="stone"?"#888":
+      o.type=="house"?"#964":
+      "#f60";
+    ctx.fillRect(o.x*TILE-camera.x,o.y*TILE-camera.y,TILE,TILE);
+  });
 
-  // КАМЕРА
-  this.cameras.main.startFollow(player);
-  this.cameras.main.setBounds(0,0,worldWidth,worldHeight);
+  enemies.forEach(e=>{
+    ctx.fillStyle="red";
+    ctx.fillRect(e.x*TILE-camera.x,e.y*TILE-camera.y,TILE,TILE);
+  });
 
-  // УПРАВЛЕНИЕ
-  cursors = this.input.keyboard.createCursorKeys();
+  ctx.fillStyle="yellow";
+  ctx.fillRect(player.x*TILE-camera.x,player.y*TILE-camera.y,TILE,TILE);
 }
 
-function update() {
-  const speed = 250;
-  player.setVelocity(0);
-
-  if (cursors.left.isDown) player.setVelocityX(-speed);
-  if (cursors.right.isDown) player.setVelocityX(speed);
-  if (cursors.up.isDown) player.setVelocityY(-speed);
-  if (cursors.down.isDown) player.setVelocityY(speed);
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
 }
+loop();
 </script>
-
 </body>
 </html>
