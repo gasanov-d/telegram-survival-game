@@ -2,9 +2,8 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<title>Survival Base</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Survival</title>
-
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
@@ -18,46 +17,52 @@ body {
   align-items: center;
   height: 100vh;
 }
-
 #game {
   width: 90%;
-  max-width: 400px;
+  max-width: 420px;
   text-align: center;
 }
-
-.stats {
-  margin-bottom: 15px;
-}
-
 button {
   width: 100%;
-  margin: 5px 0;
-  padding: 12px;
+  padding: 14px;
+  margin: 6px 0;
   font-size: 16px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: #2a9df4;
-  color: #fff;
+  color: white;
+}
+.card {
+  background: #1c1c1c;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
 }
 </style>
 </head>
 
 <body>
-
 <div id="game">
-  <h2>🧍 Выживший</h2>
 
-  <div class="stats">
-    ❤️ HP: <span id="hp">100</span><br>
-    🍖 Голод: <span id="food">100</span><br>
-    ⚡ Энергия: <span id="energy">100</span>
-  </div>
+<h2>🏠 Твоя база</h2>
 
-  <button onclick="explore()">🔍 Исследовать</button>
-  <button onclick="eat()">🍎 Поесть</button>
-  <button onclick="rest()">💤 Отдохнуть</button>
+<div class="card" id="fireplace">
+🔥 Костёр: <b>не построен</b>
+</div>
 
-  <p id="log"></p>
+<div class="card" id="workbench">
+🛠 Верстак: <b>не построен</b>
+</div>
+
+<button onclick="buildFire()">🔥 Построить костёр (5 дерева)</button>
+
+<div class="card">
+📦 Ресурсы:<br>
+🪵 Дерево: <span id="wood">10</span>
+</div>
+
+<p id="log"></p>
+
 </div>
 
 <script>
@@ -65,50 +70,34 @@ const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
 
-let hp = 100;
-let food = 100;
-let energy = 100;
+let wood = 10;
+let fireBuilt = false;
 
 function update() {
-  document.getElementById('hp').textContent = hp;
-  document.getElementById('food').textContent = food;
-  document.getElementById('energy').textContent = energy;
+  document.getElementById("wood").textContent = wood;
+  document.getElementById("fireplace").innerHTML =
+    fireBuilt
+      ? "🔥 Костёр: <b>построен</b>"
+      : "🔥 Костёр: <b>не построен</b>";
+}
 
-  if (hp <= 0) {
-    document.getElementById('game').innerHTML = "<h2>☠️ Ты умер</h2>";
+function buildFire() {
+  if (fireBuilt) {
+    log("Костёр уже построен");
+    return;
   }
-}
-
-function explore() {
-  food -= 10;
-  energy -= 15;
-
-  if (Math.random() < 0.3) {
-    hp -= 20;
-    log("Ты ранен во время исследования");
-  } else {
-    log("Ты нашёл безопасное место");
+  if (wood < 5) {
+    log("Недостаточно дерева");
+    return;
   }
-
-  update();
-}
-
-function eat() {
-  food += 20;
-  if (food > 100) food = 100;
-  log("Ты поел");
-  update();
-}
-
-function rest() {
-  energy += 20;
-  if (energy > 100) energy = 100;
-  log("Ты отдохнул");
+  wood -= 5;
+  fireBuilt = true;
+  log("Ты построил костёр 🔥");
   update();
 }
 
 function log(text) {
-  document.getElementById('log').textContent = text;
+  document.getElementById("log").textContent = text;
 }
 
 update();
