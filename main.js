@@ -13,7 +13,6 @@ const config = {
     arcade: { debug: false }
   },
   scene: {
-    preload,
     create,
     update
   }
@@ -24,27 +23,28 @@ const game = new Phaser.Game(config);
 let player;
 let cursors;
 
-function preload() {
-  this.load.image('player', 'https://i.imgur.com/6QKQ4QF.png');
-}
-
 function create() {
-  player = this.physics.add.sprite(
+  // создаём игрока как квадрат
+  player = this.add.rectangle(
     config.width / 2,
     config.height / 2,
-    'player'
+    40,
+    40,
+    0xffd000
   );
 
-  player.setCollideWorldBounds(true);
+  this.physics.add.existing(player);
+  player.body.setCollideWorldBounds(true);
+
   cursors = this.input.keyboard.createCursorKeys();
 }
 
 function update() {
-  const speed = 200;
-  player.setVelocity(0);
+  const speed = 250;
+  player.body.setVelocity(0);
 
-  if (cursors.left.isDown) player.setVelocityX(-speed);
-  if (cursors.right.isDown) player.setVelocityX(speed);
-  if (cursors.up.isDown) player.setVelocityY(-speed);
-  if (cursors.down.isDown) player.setVelocityY(speed);
+  if (cursors.left.isDown) player.body.setVelocityX(-speed);
+  if (cursors.right.isDown) player.body.setVelocityX(speed);
+  if (cursors.up.isDown) player.body.setVelocityY(-speed);
+  if (cursors.down.isDown) player.body.setVelocityY(speed);
 }
