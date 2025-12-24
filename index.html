@@ -113,40 +113,88 @@ const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
 
+/* ====== НАСТРОЙКИ ====== */
+const TILE = 48;
+const MAP_W = 20;
+const MAP_H = 14;
+
+/* ====== СОСТОЯНИЕ ИГРЫ ====== */
 let state = {
-  x: window.innerWidth / 2,
-  y: window.innerHeight / 2,
+  player: { x: 10, y: 7 },
   hp: 100,
   energy: 100,
-  wood: 0
+  wood: 0,
+  stone: 0
 };
 
-const player = document.getElementById("player");
+const game = document.getElementById("game");
+const playerEl = document.getElementById("player");
 
+/* ====== КАРТА ====== */
+const map = [];
+for (let y = 0; y < MAP_H; y++) {
+  map[y] = [];
+  for (let x = 0; x < MAP_W; x++) {
+    const r = Math.random();
+    let type = "grass";
+    if (r < 0.15) type = "tree";
+    else if (r < 0.25) type = "stone";
+    map[y][x] = type;
+  }
+}
+
+/* ====== ОТРИСОВКА КАРТЫ ====== */
+function drawMap() {
+  game.innerHTML = "";
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      const tile = document.createElement("div");
+      tile.className = "tile " + map[y][x];
+      tile.style.left = x * TILE + "px";
+      tile.style.top = y * TILE + "px";
+
+      tile.onclick = () => interact(x, y);
+
+      game.appendChild(tile);
+    }
+  }
+  game.appendChild(playerEl);
+}
+
+/* ====== ИГРОК ====== */
+function drawPlayer() {
+  playerEl.style.left = state.player.x * TILE + 8 + "px";
+  playerEl.style.top = state.player.y * TILE + 8 + "px";
+}
+
+/* ====== ВЗАИМОДЕЙСТВИЕ ====== */
+function interact(x, y) {
+  const dx = Math.abs(x - state.player.x);
+  const dy = Math.abs(y - state.player.y);
+  if (dx > 1 || dy > 1) return;
+
+  if (map[y][x] === "tree") {
+    map[y][x] = "grass";
+    state.wood++;
+  }
+  if (map[y][x] === "stone") {
+    map[y][x] = "grass";
+    state.stone++;
+  }
+
+  updateHUD();
+  drawMap();
+  drawPlayer();
+}
+
+/* ====== HUD ====== */
 function updateHUD() {
   hp.textContent = state.hp;
   energy.textContent = state.energy;
   wood.textContent = state.wood;
 }
 
-function collectWood() {
-  if (state.energy < 5) return;
-  state.wood += 1;
-  state.energy -= 5;
-  updateHUD();
-}
-
-function buildHouse() {
-  if (state.wood < 5) {
-    alert("Нужно 5 дерева");
-    return;
-  }
-  state.wood -= 5;
-  updateHUD();
-  alert("Дом построен!");
-}
-
-/* === JOYSTICK === */
+/* ====== ДЖОЙСТИК ====== */
 let dragging = false;
 const joystick = document.getElementById("joystick");
 const stick = document.getElementById("stick");
@@ -161,27 +209,28 @@ joystick.addEventListener("touchend", () => {
 joystick.addEventListener("touchmove", e => {
   if (!dragging) return;
   const rect = joystick.getBoundingClientRect();
-  const touch = e.touches[0];
-  const dx = touch.clientX - rect.left - 60;
-  const dy = touch.clientY - rect.top - 60;
+  const t = e.touches[0];
+  const dx = t.clientX - rect.left - 60;
+  const dy = t.clientY - rect.top - 60;
 
-  const dist = Math.min(40, Math.hypot(dx, dy));
-  const angle = Math.atan2(dy, dx);
+  const mx = Math.sign(dx);
+  const my = Math.sign(dy);
 
-  const mx = Math.cos(angle) * dist;
-  const my = Math.sin(angle) * dist;
-
-  stick.style.left = 40 + mx + "px";
-  stick.style.top = 40 + my + "px";
-
-  state.x += mx * 0.1;
-  state.y += my * 0.1;
-
-  player.style.left = state.x + "px";
-  player.style.top = state.y + "px";
+  movePlayer(mx, my);
 });
 
+/* ====== ДВИЖЕНИЕ ====== */
+function movePlayer(dx, dy) {
+  const nx = state.player.x + dx;
+  const ny = state.player.y + dy;
+  if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) return;
+  state.player.x = nx;
+  state.player.y = ny;
+  drawPlayer();
+}
+
+/* ====== СТАРТ ====== */
+drawMap();
+drawPlayer();
 updateHUD();
 </script>
-</body>
-</html>
