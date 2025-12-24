@@ -1,204 +1,164 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Survival TG</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Island Survival</title>
+
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
-html,body{
-  margin:0;
-  padding:0;
-  overflow:hidden;
-  background:#111;
-  color:#fff;
-  font-family:Arial;
-}
-#game{
-  position:relative;
-  width:100vw;
-  height:100vh;
-  background:#2e7d32;
-}
-.tile{
-  position:absolute;
-  width:40px;
-  height:40px;
-}
-.grass{background:#2e7d32;}
-.tree{background:#1b5e20;}
-.stone{background:#757575;}
-
-#player{
-  position:absolute;
-  width:32px;
-  height:32px;
-  background:#ffd600;
-  border-radius:6px;
-  z-index:10;
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0f172a;
+  color: #fff;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
 }
 
-#ui{
-  position:absolute;
-  bottom:0;
-  width:100%;
-  background:rgba(0,0,0,0.7);
-  padding:6px;
-  display:flex;
-  justify-content:space-between;
-  font-size:14px;
+#app {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
 }
 
-.btn{
-  background:#1976d2;
-  padding:8px;
-  border-radius:6px;
-  margin:2px;
-  text-align:center;
-  user-select:none;
+/* ===== GAME FIELD ===== */
+#world {
+  width: 100%;
+  height: 100%;
+  background: #1e7f3f;
+  position: relative;
 }
 
-#joystick{
-  position:absolute;
-  bottom:90px;
-  left:20px;
-  width:120px;
-  height:120px;
-  border-radius:50%;
-  background:rgba(255,255,255,0.1);
+/* Player */
+#player {
+  width: 32px;
+  height: 32px;
+  background: #facc15;
+  border-radius: 6px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
 }
-#stick{
-  position:absolute;
-  left:40px;
-  top:40px;
-  width:40px;
-  height:40px;
-  border-radius:50%;
-  background:#fff;
+
+/* ===== HUD ===== */
+#hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 8px;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+/* ===== CONTROLS ===== */
+#controls {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+}
+
+.btn {
+  background: #2563eb;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  text-align: center;
+  user-select: none;
+}
+
+/* ===== BUILD MENU ===== */
+#buildMenu {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.7);
+  padding: 10px;
+  border-radius: 10px;
+  display: none;
 }
 </style>
 </head>
 
 <body>
-<div id="game"></div>
+<div id="app">
 
-<div id="joystick">
-  <div id="stick"></div>
-</div>
+  <div id="world">
+    <div id="player"></div>
+  </div>
 
-<div id="ui">
-  <div>
-    ❤️ <span id="hp">100</span> |
-    ⚡ <span id="energy">100</span> |
-    🪵 <span id="wood">0</span>
+  <div id="hud">
+    <div>❤️ <span id="hp">100</span></div>
+    <div>⚡ <span id="energy">100</span></div>
+    <div>🪵 <span id="wood">0</span></div>
   </div>
-  <div>
-    <span class="btn" onclick="build()">🏠 Строить</span>
+
+  <div id="controls">
+    <div class="btn" onclick="gatherWood()">🌲 Собрать дерево</div>
+    <div class="btn" onclick="toggleBuild()">🏠 Строить</div>
   </div>
+
+  <div id="buildMenu">
+    <div class="btn" onclick="buildFire()">🔥 Костёр (5 🪵)</div>
+  </div>
+
 </div>
 
 <script>
 const tg = window.Telegram.WebApp;
+tg.ready();
 tg.expand();
 
-const game = document.getElementById("game");
+let state = {
+  hp: 100,
+  energy: 100,
+  wood: 0,
+  fire: false
+};
 
-const mapW = 20;
-const mapH = 15;
-const tileSize = 40;
-
-let tiles = [];
-let wood = 0;
-let hp = 100;
-let energy = 100;
-
-for(let y=0;y<mapH;y++){
-  for(let x=0;x<mapW;x++){
-    let t = document.createElement("div");
-    t.className="tile grass";
-    t.style.left = x*tileSize+"px";
-    t.style.top = y*tileSize+"px";
-
-    if(Math.random()<0.1){
-      t.className="tile tree";
-      t.dataset.type="tree";
-    }
-
-    game.appendChild(t);
-    tiles.push(t);
-  }
+function updateUI() {
+  hp.textContent = state.hp;
+  energy.textContent = state.energy;
+  wood.textContent = state.wood;
 }
 
-const player = document.createElement("div");
-player.id="player";
-let px=200, py=200;
-game.appendChild(player);
-
-function render(){
-  player.style.left = px+"px";
-  player.style.top = py+"px";
-  document.getElementById("wood").textContent=wood;
-  document.getElementById("hp").textContent=hp;
-  document.getElementById("energy").textContent=energy;
-}
-render();
-
-/* COLLISION + GATHER */
-function checkTile(){
-  tiles.forEach(t=>{
-    let tx=parseInt(t.style.left);
-    let ty=parseInt(t.style.top);
-    if(Math.abs(px-tx)<30 && Math.abs(py-ty)<30){
-      if(t.dataset.type==="tree"){
-        wood++;
-        t.className="tile grass";
-        delete t.dataset.type;
-      }
-    }
-  });
+function gatherWood() {
+  if (state.energy <= 0) return;
+  state.wood += 1;
+  state.energy -= 5;
+  updateUI();
 }
 
-/* JOYSTICK */
-let stick=document.getElementById("stick");
-let joy=document.getElementById("joystick");
-let dragging=false;
-
-joy.addEventListener("touchstart",()=>dragging=true);
-joy.addEventListener("touchend",()=>{
-  dragging=false;
-  stick.style.left="40px";
-  stick.style.top="40px";
-});
-joy.addEventListener("touchmove",e=>{
-  if(!dragging)return;
-  let r=joy.getBoundingClientRect();
-  let x=e.touches[0].clientX-r.left-20;
-  let y=e.touches[0].clientY-r.top-20;
-  x=Math.max(0,Math.min(80,x));
-  y=Math.max(0,Math.min(80,y));
-  stick.style.left=x+"px";
-  stick.style.top=y+"px";
-  px+= (x-40)/5;
-  py+= (y-40)/5;
-  energy=Math.max(0,energy-0.05);
-  checkTile();
-  render();
-});
-
-/* BUILD */
-function build(){
-  if(wood>=5){
-    wood-=5;
-    let h=document.createElement("div");
-    h.className="tile";
-    h.style.background="#8d6e63";
-    h.style.left=(px-20)+"px";
-    h.style.top=(py-20)+"px";
-    game.appendChild(h);
-  }
-  render();
+function toggleBuild() {
+  buildMenu.style.display =
+    buildMenu.style.display === "none" ? "block" : "none";
 }
+
+function buildFire() {
+  if (state.fire) return;
+  if (state.wood < 5) return;
+  state.wood -= 5;
+  state.fire = true;
+
+  const fire = document.createElement("div");
+  fire.style.width = "30px";
+  fire.style.height = "30px";
+  fire.style.background = "orange";
+  fire.style.position = "absolute";
+  fire.style.left = "55%";
+  fire.style.top = "55%";
+  fire.style.borderRadius = "50%";
+  world.appendChild(fire);
+
+  updateUI();
+}
+
+updateUI();
 </script>
 </body>
 </html>
