@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Island Survival</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -12,38 +12,29 @@ html, body {
   margin: 0;
   padding: 0;
   background: #0f172a;
-  color: #fff;
   font-family: Arial, sans-serif;
   overflow: hidden;
+  touch-action: none;
 }
 
-#app {
+#game {
+  position: relative;
   width: 100vw;
   height: 100vh;
-  position: relative;
+  background: #166534;
 }
 
-/* ===== GAME FIELD ===== */
-#world {
-  width: 100%;
-  height: 100%;
-  background: #1e7f3f;
-  position: relative;
-}
-
-/* Player */
 #player {
+  position: absolute;
   width: 32px;
   height: 32px;
-  background: #facc15;
+  background: yellow;
   border-radius: 6px;
-  position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
 }
 
-/* ===== HUD ===== */
 #hud {
   position: absolute;
   top: 0;
@@ -51,62 +42,70 @@ html, body {
   width: 100%;
   padding: 8px;
   background: rgba(0,0,0,0.6);
+  color: white;
   display: flex;
-  justify-content: space-between;
+  justify-content: space-around;
   font-size: 14px;
 }
 
-/* ===== CONTROLS ===== */
-#controls {
+#actions {
   position: absolute;
-  bottom: 10px;
-  left: 10px;
+  bottom: 80px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .btn {
   background: #2563eb;
-  padding: 10px 14px;
-  margin-bottom: 8px;
-  border-radius: 8px;
+  color: white;
+  padding: 12px;
+  border-radius: 10px;
   text-align: center;
-  user-select: none;
+  font-size: 14px;
 }
 
-/* ===== BUILD MENU ===== */
-#buildMenu {
+#joystick {
   position: absolute;
-  bottom: 10px;
-  right: 10px;
-  background: rgba(0,0,0,0.7);
-  padding: 10px;
-  border-radius: 10px;
-  display: none;
+  bottom: 20px;
+  left: 20px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+}
+
+#stick {
+  position: absolute;
+  left: 40px;
+  top: 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: white;
 }
 </style>
 </head>
 
 <body>
-<div id="app">
-
-  <div id="world">
-    <div id="player"></div>
-  </div>
-
+<div id="game">
   <div id="hud">
-    <div>❤️ <span id="hp">100</span></div>
-    <div>⚡ <span id="energy">100</span></div>
-    <div>🪵 <span id="wood">0</span></div>
+    ❤️ <span id="hp">100</span>
+    ⚡ <span id="energy">100</span>
+    🌲 <span id="wood">0</span>
   </div>
 
-  <div id="controls">
-    <div class="btn" onclick="gatherWood()">🌲 Собрать дерево</div>
-    <div class="btn" onclick="toggleBuild()">🏠 Строить</div>
+  <div id="player"></div>
+
+  <div id="actions">
+    <div class="btn" onclick="collectWood()">🌲 Собрать дерево</div>
+    <div class="btn" onclick="buildHouse()">🏠 Построить дом</div>
   </div>
 
-  <div id="buildMenu">
-    <div class="btn" onclick="buildFire()">🔥 Костёр (5 🪵)</div>
+  <div id="joystick">
+    <div id="stick"></div>
   </div>
-
 </div>
 
 <script>
@@ -115,50 +114,74 @@ tg.ready();
 tg.expand();
 
 let state = {
+  x: window.innerWidth / 2,
+  y: window.innerHeight / 2,
   hp: 100,
   energy: 100,
-  wood: 0,
-  fire: false
+  wood: 0
 };
 
-function updateUI() {
+const player = document.getElementById("player");
+
+function updateHUD() {
   hp.textContent = state.hp;
   energy.textContent = state.energy;
   wood.textContent = state.wood;
 }
 
-function gatherWood() {
-  if (state.energy <= 0) return;
+function collectWood() {
+  if (state.energy < 5) return;
   state.wood += 1;
   state.energy -= 5;
-  updateUI();
+  updateHUD();
 }
 
-function toggleBuild() {
-  buildMenu.style.display =
-    buildMenu.style.display === "none" ? "block" : "none";
-}
-
-function buildFire() {
-  if (state.fire) return;
-  if (state.wood < 5) return;
+function buildHouse() {
+  if (state.wood < 5) {
+    alert("Нужно 5 дерева");
+    return;
+  }
   state.wood -= 5;
-  state.fire = true;
-
-  const fire = document.createElement("div");
-  fire.style.width = "30px";
-  fire.style.height = "30px";
-  fire.style.background = "orange";
-  fire.style.position = "absolute";
-  fire.style.left = "55%";
-  fire.style.top = "55%";
-  fire.style.borderRadius = "50%";
-  world.appendChild(fire);
-
-  updateUI();
+  updateHUD();
+  alert("Дом построен!");
 }
 
-updateUI();
+/* === JOYSTICK === */
+let dragging = false;
+const joystick = document.getElementById("joystick");
+const stick = document.getElementById("stick");
+
+joystick.addEventListener("touchstart", () => dragging = true);
+joystick.addEventListener("touchend", () => {
+  dragging = false;
+  stick.style.left = "40px";
+  stick.style.top = "40px";
+});
+
+joystick.addEventListener("touchmove", e => {
+  if (!dragging) return;
+  const rect = joystick.getBoundingClientRect();
+  const touch = e.touches[0];
+  const dx = touch.clientX - rect.left - 60;
+  const dy = touch.clientY - rect.top - 60;
+
+  const dist = Math.min(40, Math.hypot(dx, dy));
+  const angle = Math.atan2(dy, dx);
+
+  const mx = Math.cos(angle) * dist;
+  const my = Math.sin(angle) * dist;
+
+  stick.style.left = 40 + mx + "px";
+  stick.style.top = 40 + my + "px";
+
+  state.x += mx * 0.1;
+  state.y += my * 0.1;
+
+  player.style.left = state.x + "px";
+  player.style.top = state.y + "px";
+});
+
+updateHUD();
 </script>
 </body>
 </html>
