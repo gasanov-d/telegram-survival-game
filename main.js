@@ -4,16 +4,23 @@ if (tg) {
   tg.expand();
 }
 
+let player;
+let platforms;
+let stars;
+let cursors;
+let score = 0;
+let scoreText;
+
 const config = {
   type: Phaser.AUTO,
-  parent: 'game',
+  parent: "game",
   width: window.innerWidth,
   height: window.innerHeight,
-  backgroundColor: '#5ec6ff',
+  backgroundColor: "#5c9cff",
   physics: {
-    default: 'arcade',
+    default: "arcade",
     arcade: {
-      gravity: { y: 900 },
+      gravity: { y: 600 },
       debug: false
     }
   },
@@ -23,38 +30,28 @@ const config = {
   }
 };
 
-const game = new Phaser.Game(config);
-
-let player;
-let platforms;
-let stars;
-let cursors;
-let score = 0;
-let scoreText;
+new Phaser.Game(config);
 
 function create() {
   // платформы
   platforms = this.physics.add.staticGroup();
 
-  platforms.create(400, config.height - 40, null)
-    .setDisplaySize(config.width, 80)
+  platforms.create(config.width / 2, config.height - 20)
+    .setDisplaySize(config.width, 40)
     .refreshBody();
 
-  platforms.create(600, 400, null)
+  platforms.create(400, 400)
     .setDisplaySize(200, 30)
     .refreshBody();
 
-  platforms.create(200, 280, null)
+  platforms.create(200, 280)
     .setDisplaySize(200, 30)
     .refreshBody();
-
-  platforms.getChildren().forEach(p => {
-    p.setFillStyle(0x2f6b2f);
-  });
 
   // игрок
   player = this.add.rectangle(100, 100, 40, 40, 0xffd000);
   this.physics.add.existing(player);
+
   player.body.setCollideWorldBounds(true);
   player.body.setBounce(0.1);
 
@@ -63,11 +60,10 @@ function create() {
   // звёзды
   stars = this.physics.add.group();
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 6; i++) {
     const star = this.add.circle(200 + i * 120, 50, 10, 0xfff200);
     this.physics.add.existing(star);
     star.body.setBounce(0.4);
-    star.body.setCollideWorldBounds(true);
     stars.add(star);
   }
 
@@ -76,9 +72,9 @@ function create() {
 
   cursors = this.input.keyboard.createCursorKeys();
 
-  scoreText = this.add.text(16, 16, 'Score: 0', {
-    fontSize: '20px',
-    fill: '#000'
+  scoreText = this.add.text(16, 16, "Score: 0", {
+    fontSize: "24px",
+    color: "#ffffff"
   });
 }
 
@@ -91,13 +87,13 @@ function update() {
     player.body.setVelocityX(0);
   }
 
-  if (cursors.up.isDown && player.body.blocked.down) {
-    player.body.setVelocityY(-550);
+  if (cursors.up.isDown && player.body.touching.down) {
+    player.body.setVelocityY(-450);
   }
 }
 
 function collectStar(player, star) {
   star.destroy();
   score += 10;
-  scoreText.setText('Score: ' + score);
+  scoreText.setText("Score: " + score);
 }
