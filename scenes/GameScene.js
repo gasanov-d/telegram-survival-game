@@ -1,3 +1,4 @@
+import Player from '../entities/Player.js';
 import MobileControls from './MobileControls.js';
 
 export default class GameScene extends Phaser.Scene {
@@ -9,35 +10,50 @@ export default class GameScene extends Phaser.Scene {
     const w = this.scale.width;
     const h = this.scale.height;
 
+    // фон
     this.cameras.main.setBackgroundColor('#6fa8dc');
 
+    // платформы
     this.platforms = this.physics.add.staticGroup();
-    this.platforms.create(w / 2, h - 20).setDisplaySize(w, 40).refreshBody();
 
-    this.player = this.add.rectangle(100, h - 200, 40, 40, 0xff0000);
-    this.physics.add.existing(this.player);
+    this.platforms
+      .create(w / 2, h - 20)
+      .setDisplaySize(w, 40)
+      .refreshBody();
 
-    this.player.body.setCollideWorldBounds(true);
-    this.player.body.setBounce(0.1);
+    this.platforms
+      .create(w / 2 - 150, h - 150)
+      .setDisplaySize(250, 30)
+      .refreshBody();
 
-    this.physics.add.collider(this.player, this.platforms);
+    this.platforms
+      .create(w / 2 + 200, h - 300)
+      .setDisplaySize(250, 30)
+      .refreshBody();
 
+    // игрок (СУЩНОСТЬ)
+    this.player = new Player(this, 100, h - 200);
+
+    // коллизия
+    this.physics.add.collider(this.player.sprite, this.platforms);
+
+    // мобильное управление
     this.controls = new MobileControls(this);
   }
 
   update() {
-    const body = this.player.body;
-
+    // горизонтальное движение
     if (this.controls.left) {
-      body.setVelocityX(-250);
+      this.player.moveLeft();
     } else if (this.controls.right) {
-      body.setVelocityX(250);
+      this.player.moveRight();
     } else {
-      body.setVelocityX(0);
+      this.player.stop();
     }
 
-    if (this.controls.jump && body.blocked.down) {
-      body.setVelocityY(-500);
+    // прыжок (работает ОДНОВРЕМЕННО с движением)
+    if (this.controls.jump) {
+      this.player.jump();
     }
   }
 }
