@@ -1,12 +1,6 @@
 import BootScene from './scenes/BootScene.js';
 import GameScene from './scenes/GameScene.js';
 
-const tg = window.Telegram?.WebApp;
-if (tg) {
-  tg.ready();
-  tg.expand();
-}
-
 const config = {
   type: Phaser.AUTO,
   parent: 'game',
