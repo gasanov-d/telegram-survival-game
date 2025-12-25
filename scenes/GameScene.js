@@ -13,7 +13,7 @@ export default class GameScene extends Phaser.Scene {
     // фон
     this.cameras.main.setBackgroundColor('#6fa8dc');
 
-    // границы мира (очень широкие)
+    // мир
     this.physics.world.setBounds(0, 0, 100000, h);
 
     // игрок
@@ -26,7 +26,7 @@ export default class GameScene extends Phaser.Scene {
     // управление
     this.controls = new MobileControls(this);
 
-    // платформы (БЕСКОНЕЧНЫЕ)
+    // платформы
     this.platformManager = new PlatformManager(this);
     this.physics.add.collider(
       this.player,
@@ -37,25 +37,54 @@ export default class GameScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player);
     this.cameras.main.setDeadzone(120, 150);
 
-    // автодвижение вперёд
-    this.player.body.setVelocityX(180);
+    // движение
+    this.baseSpeed = 180;
+    this.maxSpeed = 320;
+    this.currentSpeed = this.baseSpeed;
+
+    // ===== ОЧКИ =====
+    this.score = 0;
+    this.scoreText = this.add.text(16, 16, '0', {
+      fontSize: '28px',
+      fontFamily: 'Arial',
+      color: '#ffffff'
+    });
+    this.scoreText.setScrollFactor(0);
+    this.scoreText.setDepth(1000);
   }
 
-  update() {
+  update(time, delta) {
     const body = this.player.body;
 
-    // постоянное движение
-    body.setVelocityX(180);
+    // === ДВИЖЕНИЕ ===
+    if (this.controls.left) {
+      this.currentSpeed = Math.max(80, this.currentSpeed - 6);
+    } else if (this.controls.right) {
+      this.currentSpeed = Math.min(
+        this.maxSpeed,
+        this.currentSpeed + 6
+      );
+    } else {
+      this.currentSpeed +=
+        (this.baseSpeed - this.currentSpeed) * 0.05;
+    }
 
-    // прыжок
+    body.setVelocityX(this.currentSpeed);
+
+    // === ПРЫЖОК ===
     if (this.controls.jump && body.blocked.down) {
       body.setVelocityY(-520);
     }
 
-    // обновление платформ
+    // === ПЛАТФОРМЫ ===
     this.platformManager.update();
 
-    // смерть при падении
+    // === ОЧКИ ===
+    // + очки за дистанцию (зависит от скорости)
+    this.score += this.currentSpeed * (delta / 1000);
+    this.scoreText.setText(Math.floor(this.score));
+
+    // === СМЕРТЬ ===
     if (this.player.y > this.scale.height + 300) {
       this.scene.restart();
     }
