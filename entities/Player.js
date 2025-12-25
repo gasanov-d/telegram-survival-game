@@ -2,12 +2,15 @@ export default class Player {
   constructor(scene, x, y) {
     this.scene = scene;
 
+    // визуал игрока
     this.sprite = scene.add.rectangle(x, y, 40, 40, 0xffcc00);
+
+    // физика
     scene.physics.add.existing(this.sprite);
+    this.sprite.body.setCollideWorldBounds(true);
+    this.sprite.body.setBounce(0.1);
 
     this.body = this.sprite.body;
-    this.body.setCollideWorldBounds(true);
-    this.body.setBounce(0.1);
   }
 
   moveLeft(speed = 250) {
