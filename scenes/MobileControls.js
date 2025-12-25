@@ -6,7 +6,10 @@ export default class MobileControls {
     this.right = false;
     this.jump = false;
 
-    // Telegram multitouch FIX
+    this.leftPointers = new Set();
+    this.rightPointers = new Set();
+    this.jumpPointers = new Set();
+
     this.scene.input.addPointer(3);
     this.scene.input.setPollAlways();
 
@@ -21,13 +24,12 @@ export default class MobileControls {
     this.zones = {
       left:  new Phaser.Geom.Rectangle(0, h - 200, w * 0.3, 200),
       right: new Phaser.Geom.Rectangle(w * 0.3, h - 200, w * 0.3, 200),
-      jump:  new Phaser.Geom.Rectangle(w * 0.6, h - 200, w * 0.4, 200)
+      jump:  new Phaser.Geom.Rectangle(w * 0.6, h - 200, w * 0.4, 200),
     };
 
-    // визуал (чтобы ты видел зоны)
-    this.drawZone(this.zones.left, 0xff0000);
+    this.drawZone(this.zones.left,  0xff0000);
     this.drawZone(this.zones.right, 0x00ff00);
-    this.drawZone(this.zones.jump, 0x0000ff);
+    this.drawZone(this.zones.jump,  0x0000ff);
   }
 
   drawZone(rect, color) {
@@ -38,23 +40,42 @@ export default class MobileControls {
   }
 
   bindInput() {
-    this.scene.input.on('pointerdown', this.handleInput, this);
-    this.scene.input.on('pointermove', this.handleInput, this);
-    this.scene.input.on('pointerup', this.clearPointer, this);
+    this.scene.input.on('pointerdown', this.onDown, this);
+    this.scene.input.on('pointerup', this.onUp, this);
+    this.scene.input.on('pointerout', this.onUp, this);
   }
 
-  handleInput(pointer) {
-    const x = pointer.x;
-    const y = pointer.y;
+  onDown(pointer) {
+    const { x, y, id } = pointer;
 
-    this.left  = Phaser.Geom.Rectangle.Contains(this.zones.left, x, y);
-    this.right = Phaser.Geom.Rectangle.Contains(this.zones.right, x, y);
-    this.jump  = Phaser.Geom.Rectangle.Contains(this.zones.jump, x, y);
+    if (Phaser.Geom.Rectangle.Contains(this.zones.left, x, y)) {
+      this.leftPointers.add(id);
+    }
+
+    if (Phaser.Geom.Rectangle.Contains(this.zones.right, x, y)) {
+      this.rightPointers.add(id);
+    }
+
+    if (Phaser.Geom.Rectangle.Contains(this.zones.jump, x, y)) {
+      this.jumpPointers.add(id);
+    }
+
+    this.updateState();
   }
 
-  clearPointer(pointer) {
-    this.left = false;
-    this.right = false;
-    this.jump = false;
+  onUp(pointer) {
+    const id = pointer.id;
+
+    this.leftPointers.delete(id);
+    this.rightPointers.delete(id);
+    this.jumpPointers.delete(id);
+
+    this.updateState();
+  }
+
+  updateState() {
+    this.left  = this.leftPointers.size > 0;
+    this.right = this.rightPointers.size > 0;
+    this.jump  = this.jumpPointers.size > 0;
   }
 }
