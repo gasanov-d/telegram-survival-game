@@ -1,3 +1,4 @@
+import BootScene from './scenes/BootScene.js';
 import GameScene from './scenes/GameScene.js';
 
 const tg = window.Telegram?.WebApp;
@@ -11,7 +12,6 @@ const config = {
   parent: 'game',
   width: window.innerWidth,
   height: window.innerHeight,
-  backgroundColor: '#000000',
   physics: {
     default: 'arcade',
     arcade: {
@@ -19,7 +19,7 @@ const config = {
       debug: false
     }
   },
-  scene: [GameScene]
+  scene: [BootScene, GameScene]
 };
 
 new Phaser.Game(config);
