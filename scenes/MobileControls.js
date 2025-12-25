@@ -6,101 +6,55 @@ export default class MobileControls {
     this.right = false;
     this.jump = false;
 
-    // ВКЛЮЧАЕМ MULTITOUCH (КЛЮЧЕВО!)
+    // Telegram multitouch FIX
     this.scene.input.addPointer(3);
+    this.scene.input.setPollAlways();
 
-    this.createButtons();
+    this.createZones();
+    this.bindInput();
   }
 
-  createButtons() {
+  createZones() {
     const w = this.scene.scale.width;
     const h = this.scene.scale.height;
 
-    const size = 130;
-    const alphaIdle = 0.15;
-    const alphaActive = 0.8;
+    this.zones = {
+      left:  new Phaser.Geom.Rectangle(0, h - 200, w * 0.3, 200),
+      right: new Phaser.Geom.Rectangle(w * 0.3, h - 200, w * 0.3, 200),
+      jump:  new Phaser.Geom.Rectangle(w * 0.6, h - 200, w * 0.4, 200)
+    };
 
-    // LEFT
-    const leftBtn = this.scene.add.rectangle(
-      100,
-      h - 140,
-      size,
-      size,
-      0x000000,
-      alphaIdle
-    )
-    .setScrollFactor(0)
-    .setInteractive({ useHandCursor: false });
+    // визуал (чтобы ты видел зоны)
+    this.drawZone(this.zones.left, 0xff0000);
+    this.drawZone(this.zones.right, 0x00ff00);
+    this.drawZone(this.zones.jump, 0x0000ff);
+  }
 
-    // RIGHT
-    const rightBtn = this.scene.add.rectangle(
-      260,
-      h - 140,
-      size,
-      size,
-      0x000000,
-      alphaIdle
-    )
-    .setScrollFactor(0)
-    .setInteractive({ useHandCursor: false });
+  drawZone(rect, color) {
+    const g = this.scene.add.graphics();
+    g.fillStyle(color, 0.15);
+    g.fillRect(rect.x, rect.y, rect.width, rect.height);
+    g.setScrollFactor(0);
+  }
 
-    // JUMP
-    const jumpBtn = this.scene.add.rectangle(
-      w - 140,
-      h - 140,
-      size,
-      size,
-      0x000000,
-      alphaIdle
-    )
-    .setScrollFactor(0)
-    .setInteractive({ useHandCursor: false });
+  bindInput() {
+    this.scene.input.on('pointerdown', this.handleInput, this);
+    this.scene.input.on('pointermove', this.handleInput, this);
+    this.scene.input.on('pointerup', this.clearPointer, this);
+  }
 
-    // === MULTITOUCH EVENTS ===
+  handleInput(pointer) {
+    const x = pointer.x;
+    const y = pointer.y;
 
-    leftBtn.on('pointerdown', () => {
-      this.left = true;
-      leftBtn.setAlpha(alphaActive);
-    });
+    this.left  = Phaser.Geom.Rectangle.Contains(this.zones.left, x, y);
+    this.right = Phaser.Geom.Rectangle.Contains(this.zones.right, x, y);
+    this.jump  = Phaser.Geom.Rectangle.Contains(this.zones.jump, x, y);
+  }
 
-    leftBtn.on('pointerup', () => {
-      this.left = false;
-      leftBtn.setAlpha(alphaIdle);
-    });
-
-    leftBtn.on('pointerout', () => {
-      this.left = false;
-      leftBtn.setAlpha(alphaIdle);
-    });
-
-    rightBtn.on('pointerdown', () => {
-      this.right = true;
-      rightBtn.setAlpha(alphaActive);
-    });
-
-    rightBtn.on('pointerup', () => {
-      this.right = false;
-      rightBtn.setAlpha(alphaIdle);
-    });
-
-    rightBtn.on('pointerout', () => {
-      this.right = false;
-      rightBtn.setAlpha(alphaIdle);
-    });
-
-    jumpBtn.on('pointerdown', () => {
-      this.jump = true;
-      jumpBtn.setAlpha(alphaActive);
-    });
-
-    jumpBtn.on('pointerup', () => {
-      this.jump = false;
-      jumpBtn.setAlpha(alphaIdle);
-    });
-
-    jumpBtn.on('pointerout', () => {
-      this.jump = false;
-      jumpBtn.setAlpha(alphaIdle);
-    });
+  clearPointer(pointer) {
+    this.left = false;
+    this.right = false;
+    this.jump = false;
   }
 }
