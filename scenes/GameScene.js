@@ -7,7 +7,6 @@ export default class GameScene extends Phaser.Scene {
   }
 
   create() {
-    const w = this.scale.width;
     const h = this.scale.height;
 
     this.cameras.main.setBackgroundColor('#6fa8dc');
@@ -17,54 +16,41 @@ export default class GameScene extends Phaser.Scene {
     this.player = this.add.rectangle(100, h - 200, 40, 40, 0xff0000);
     this.physics.add.existing(this.player);
     this.player.body.setGravityY(900);
-    this.player.body.setCollideWorldBounds(false);
 
     // управление
     this.controls = new MobileControls(this);
 
     // платформы
     this.platformManager = new PlatformManager(this);
-    this.physics.add.collider(
-      this.player,
-      this.platformManager.platforms
-    );
+    this.physics.add.collider(this.player, this.platformManager.platforms);
 
     // камера
     this.cameras.main.startFollow(this.player);
     this.cameras.main.setDeadzone(120, 150);
 
-    // движение
+    // скорость
     this.baseSpeed = 180;
-    this.maxSpeed = 320;
     this.currentSpeed = this.baseSpeed;
 
-    // ===== ОЧКИ (ПО ДИСТАНЦИИ) =====
+    // очки
     this.startX = this.player.x;
-    this.score = 0;
-
     this.scoreText = this.add.text(16, 16, '0', {
       fontSize: '28px',
-      fontFamily: 'Arial',
-      color: '#ffffff'
-    })
-      .setScrollFactor(0)
-      .setDepth(1000);
+      color: '#fff'
+    }).setScrollFactor(0);
   }
 
   update() {
     const body = this.player.body;
 
+    // ОБЯЗАТЕЛЬНО
+    this.controls.update();
+
     // движение
     if (this.controls.left) {
       this.currentSpeed = Math.max(80, this.currentSpeed - 6);
     } else if (this.controls.right) {
-      this.currentSpeed = Math.min(
-        this.maxSpeed,
-        this.currentSpeed + 6
-      );
-    } else {
-      this.currentSpeed +=
-        (this.baseSpeed - this.currentSpeed) * 0.05;
+      this.currentSpeed += 6;
     }
 
     body.setVelocityX(this.currentSpeed);
@@ -74,16 +60,10 @@ export default class GameScene extends Phaser.Scene {
       body.setVelocityY(-520);
     }
 
-    // платформы
     this.platformManager.update();
 
-    // ===== ОЧКИ =====
-    this.score = Math.floor(this.player.x - this.startX);
-    this.scoreText.setText(this.score);
-
-    // смерть
-    if (this.player.y > this.scale.height + 300) {
-      this.scene.restart();
-    }
+    this.scoreText.setText(
+      Math.floor(this.player.x - this.startX)
+    );
   }
 }
