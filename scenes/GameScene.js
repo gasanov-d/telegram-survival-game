@@ -1,4 +1,3 @@
-import Player from '../entities/Player.js';
 import MobileControls from './MobileControls.js';
 
 export default class GameScene extends Phaser.Scene {
@@ -13,47 +12,63 @@ export default class GameScene extends Phaser.Scene {
     // фон
     this.cameras.main.setBackgroundColor('#6fa8dc');
 
+    // физика мира
+    this.physics.world.setBounds(0, 0, 100000, h);
+
     // платформы
     this.platforms = this.physics.add.staticGroup();
 
     this.platforms
-      .create(w / 2, h - 20)
-      .setDisplaySize(w, 40)
+      .create(400, h - 20)
+      .setDisplaySize(800, 40)
       .refreshBody();
 
     this.platforms
-      .create(w / 2 - 150, h - 150)
-      .setDisplaySize(250, 30)
+      .create(900, h - 150)
+      .setDisplaySize(300, 30)
       .refreshBody();
 
     this.platforms
-      .create(w / 2 + 200, h - 300)
-      .setDisplaySize(250, 30)
+      .create(1400, h - 250)
+      .setDisplaySize(300, 30)
       .refreshBody();
 
-    // игрок (СУЩНОСТЬ)
-    this.player = new Player(this, 100, h - 200);
+    // игрок
+    this.player = this.add.rectangle(100, h - 200, 40, 40, 0xff0000);
+    this.physics.add.existing(this.player);
 
-    // коллизия
-    this.physics.add.collider(this.player.sprite, this.platforms);
+    this.player.body.setCollideWorldBounds(false);
+    this.player.body.setBounce(0);
+    this.player.body.setGravityY(900);
 
-    // мобильное управление
+    // столкновения
+    this.physics.add.collider(this.player, this.platforms);
+
+    // камера
+    this.cameras.main.startFollow(this.player);
+    this.cameras.main.setDeadzone(100, 150);
+
+    // управление
     this.controls = new MobileControls(this);
+
+    // постоянное движение вперёд (survival)
+    this.player.body.setVelocityX(180);
   }
 
   update() {
-    // горизонтальное движение
-    if (this.controls.left) {
-      this.player.moveLeft();
-    } else if (this.controls.right) {
-      this.player.moveRight();
-    } else {
-      this.player.stop();
+    const body = this.player.body;
+
+    // движение вперёд всегда
+    body.setVelocityX(180);
+
+    // прыжок
+    if (this.controls.jump && body.blocked.down) {
+      body.setVelocityY(-520);
     }
 
-    // прыжок (работает ОДНОВРЕМЕННО с движением)
-    if (this.controls.jump) {
-      this.player.jump();
+    // смерть при падении
+    if (this.player.y > this.scale.height + 300) {
+      this.scene.restart();
     }
   }
 }
