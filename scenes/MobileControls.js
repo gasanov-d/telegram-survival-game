@@ -1,81 +1,77 @@
-export default class MobileControls {
-  constructor(scene) {
-    this.scene = scene;
+import MobileControls from './MobileControls.js';
+import PlatformManager from '../world/PlatformManager.js';
 
-    this.left = false;
-    this.right = false;
-    this.jump = false;
-
-    this.leftPointers = new Set();
-    this.rightPointers = new Set();
-    this.jumpPointers = new Set();
-
-    this.scene.input.addPointer(3);
-    this.scene.input.setPollAlways();
-
-    this.createZones();
-    this.bindInput();
+export default class GameScene extends Phaser.Scene {
+  constructor() {
+    super('GameScene');
   }
 
-  createZones() {
-    const w = this.scene.scale.width;
-    const h = this.scene.scale.height;
+  create() {
+    const w = this.scale.width;
+    const h = this.scale.height;
 
-    this.zones = {
-      left:  new Phaser.Geom.Rectangle(0, h - 200, w * 0.3, 200),
-      right: new Phaser.Geom.Rectangle(w * 0.3, h - 200, w * 0.3, 200),
-      jump:  new Phaser.Geom.Rectangle(w * 0.6, h - 200, w * 0.4, 200),
-    };
+    this.cameras.main.setBackgroundColor('#6fa8dc');
 
-    this.drawZone(this.zones.left,  0xff0000);
-    this.drawZone(this.zones.right, 0x00ff00);
-    this.drawZone(this.zones.jump,  0x0000ff);
+    // мир
+    this.physics.world.setBounds(0, 0, 100000, h);
+
+    // игрок
+    this.player = this.add.rectangle(100, h - 200, 40, 40, 0xff0000);
+    this.physics.add.existing(this.player);
+
+    this.player.body.setGravityY(900);
+    this.player.body.setCollideWorldBounds(false);
+
+    // управление
+    this.controls = new MobileControls(this);
+
+    // платформы
+    this.platformManager = new PlatformManager(this);
+    this.physics.add.collider(
+      this.player,
+      this.platformManager.platforms
+    );
+
+    // камера
+    this.cameras.main.startFollow(this.player);
+    this.cameras.main.setDeadzone(120, 150);
+
+    // параметры движения
+    this.baseSpeed = 180;
+    this.maxSpeed = 300;
+    this.currentSpeed = this.baseSpeed;
   }
 
-  drawZone(rect, color) {
-    const g = this.scene.add.graphics();
-    g.fillStyle(color, 0.15);
-    g.fillRect(rect.x, rect.y, rect.width, rect.height);
-    g.setScrollFactor(0);
-  }
+  update() {
+    const body = this.player.body;
 
-  bindInput() {
-    this.scene.input.on('pointerdown', this.onDown, this);
-    this.scene.input.on('pointerup', this.onUp, this);
-    this.scene.input.on('pointerout', this.onUp, this);
-  }
-
-  onDown(pointer) {
-    const { x, y, id } = pointer;
-
-    if (Phaser.Geom.Rectangle.Contains(this.zones.left, x, y)) {
-      this.leftPointers.add(id);
+    // === ГОРИЗОНТАЛЬНОЕ ДВИЖЕНИЕ ===
+    if (this.controls.left) {
+      this.currentSpeed = Math.max(80, this.currentSpeed - 6);
+    } else if (this.controls.right) {
+      this.currentSpeed = Math.min(
+        this.maxSpeed,
+        this.currentSpeed + 6
+      );
+    } else {
+      // плавный возврат к базовой скорости
+      this.currentSpeed +=
+        (this.baseSpeed - this.currentSpeed) * 0.05;
     }
 
-    if (Phaser.Geom.Rectangle.Contains(this.zones.right, x, y)) {
-      this.rightPointers.add(id);
+    body.setVelocityX(this.currentSpeed);
+
+    // === ПРЫЖОК ===
+    if (this.controls.jump && body.blocked.down) {
+      body.setVelocityY(-520);
     }
 
-    if (Phaser.Geom.Rectangle.Contains(this.zones.jump, x, y)) {
-      this.jumpPointers.add(id);
+    // === ОБНОВЛЕНИЕ МИРА ===
+    this.platformManager.update();
+
+    // === СМЕРТЬ ===
+    if (this.player.y > this.scale.height + 300) {
+      this.scene.restart();
     }
-
-    this.updateState();
-  }
-
-  onUp(pointer) {
-    const id = pointer.id;
-
-    this.leftPointers.delete(id);
-    this.rightPointers.delete(id);
-    this.jumpPointers.delete(id);
-
-    this.updateState();
-  }
-
-  updateState() {
-    this.left  = this.leftPointers.size > 0;
-    this.right = this.rightPointers.size > 0;
-    this.jump  = this.jumpPointers.size > 0;
   }
 }
