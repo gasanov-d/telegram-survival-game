@@ -10,16 +10,12 @@ export default class GameScene extends Phaser.Scene {
     const w = this.scale.width;
     const h = this.scale.height;
 
-    // фон
     this.cameras.main.setBackgroundColor('#6fa8dc');
-
-    // мир
     this.physics.world.setBounds(0, 0, 100000, h);
 
     // игрок
     this.player = this.add.rectangle(100, h - 200, 40, 40, 0xff0000);
     this.physics.add.existing(this.player);
-
     this.player.body.setGravityY(900);
     this.player.body.setCollideWorldBounds(false);
 
@@ -42,21 +38,23 @@ export default class GameScene extends Phaser.Scene {
     this.maxSpeed = 320;
     this.currentSpeed = this.baseSpeed;
 
-    // ===== ОЧКИ =====
+    // ===== ОЧКИ (ПО ДИСТАНЦИИ) =====
+    this.startX = this.player.x;
     this.score = 0;
+
     this.scoreText = this.add.text(16, 16, '0', {
       fontSize: '28px',
       fontFamily: 'Arial',
       color: '#ffffff'
-    });
-    this.scoreText.setScrollFactor(0);
-    this.scoreText.setDepth(1000);
+    })
+      .setScrollFactor(0)
+      .setDepth(1000);
   }
 
-  update(time, delta) {
+  update() {
     const body = this.player.body;
 
-    // === ДВИЖЕНИЕ ===
+    // движение
     if (this.controls.left) {
       this.currentSpeed = Math.max(80, this.currentSpeed - 6);
     } else if (this.controls.right) {
@@ -71,20 +69,19 @@ export default class GameScene extends Phaser.Scene {
 
     body.setVelocityX(this.currentSpeed);
 
-    // === ПРЫЖОК ===
+    // прыжок
     if (this.controls.jump && body.blocked.down) {
       body.setVelocityY(-520);
     }
 
-    // === ПЛАТФОРМЫ ===
+    // платформы
     this.platformManager.update();
 
-    // === ОЧКИ ===
-    // + очки за дистанцию (зависит от скорости)
-    this.score += this.currentSpeed * (delta / 1000);
-    this.scoreText.setText(Math.floor(this.score));
+    // ===== ОЧКИ =====
+    this.score = Math.floor(this.player.x - this.startX);
+    this.scoreText.setText(this.score);
 
-    // === СМЕРТЬ ===
+    // смерть
     if (this.player.y > this.scale.height + 300) {
       this.scene.restart();
     }
