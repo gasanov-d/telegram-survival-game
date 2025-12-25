@@ -10,16 +10,20 @@ export default class MobileControls {
 
   createButtons() {
     const h = this.scene.scale.height;
+    const w = this.scene.scale.width;
 
-    const leftBtn = this.scene.add.rectangle(80, h - 80, 120, 120, 0x000000, 0.3)
+    const leftBtn = this.scene.add.rectangle(80, h - 80, 120, 120, 0x00ff00)
+      .setAlpha(0.5)
       .setScrollFactor(0)
       .setInteractive();
 
-    const rightBtn = this.scene.add.rectangle(220, h - 80, 120, 120, 0x000000, 0.3)
+    const rightBtn = this.scene.add.rectangle(220, h - 80, 120, 120, 0x00ff00)
+      .setAlpha(0.5)
       .setScrollFactor(0)
       .setInteractive();
 
-    const jumpBtn = this.scene.add.rectangle(this.scene.scale.width - 100, h - 100, 140, 140, 0x000000, 0.3)
+    const jumpBtn = this.scene.add.rectangle(w - 100, h - 100, 140, 140, 0xffff00)
+      .setAlpha(0.5)
       .setScrollFactor(0)
       .setInteractive();
 
