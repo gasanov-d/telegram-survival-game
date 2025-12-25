@@ -1,77 +1,55 @@
-import MobileControls from './MobileControls.js';
-import PlatformManager from '../world/PlatformManager.js';
+export default class MobileControls {
+  constructor(scene) {
+    this.scene = scene;
 
-export default class GameScene extends Phaser.Scene {
-  constructor() {
-    super('GameScene');
+    this.left = false;
+    this.right = false;
+    this.jump = false;
+
+    scene.input.addPointer(3);
+
+    this.createButtons();
+    this.bindEvents();
   }
 
-  create() {
-    const w = this.scale.width;
-    const h = this.scale.height;
+  createButtons() {
+    const w = this.scene.scale.width;
+    const h = this.scene.scale.height;
 
-    this.cameras.main.setBackgroundColor('#6fa8dc');
-
-    // мир
-    this.physics.world.setBounds(0, 0, 100000, h);
-
-    // игрок
-    this.player = this.add.rectangle(100, h - 200, 40, 40, 0xff0000);
-    this.physics.add.existing(this.player);
-
-    this.player.body.setGravityY(900);
-    this.player.body.setCollideWorldBounds(false);
-
-    // управление
-    this.controls = new MobileControls(this);
-
-    // платформы
-    this.platformManager = new PlatformManager(this);
-    this.physics.add.collider(
-      this.player,
-      this.platformManager.platforms
-    );
-
-    // камера
-    this.cameras.main.startFollow(this.player);
-    this.cameras.main.setDeadzone(120, 150);
-
-    // параметры движения
-    this.baseSpeed = 180;
-    this.maxSpeed = 300;
-    this.currentSpeed = this.baseSpeed;
+    this.buttons = {
+      left: this.createButton(60, h - 80, '◀'),
+      right: this.createButton(160, h - 80, '▶'),
+      jump: this.createButton(w - 80, h - 80, '▲')
+    };
   }
 
-  update() {
-    const body = this.player.body;
+  createButton(x, y, text) {
+    const btn = this.scene.add.text(x, y, text, {
+      fontSize: '48px',
+      fontFamily: 'Arial',
+      color: '#ffffff',
+      backgroundColor: '#000000'
+    });
 
-    // === ГОРИЗОНТАЛЬНОЕ ДВИЖЕНИЕ ===
-    if (this.controls.left) {
-      this.currentSpeed = Math.max(80, this.currentSpeed - 6);
-    } else if (this.controls.right) {
-      this.currentSpeed = Math.min(
-        this.maxSpeed,
-        this.currentSpeed + 6
-      );
-    } else {
-      // плавный возврат к базовой скорости
-      this.currentSpeed +=
-        (this.baseSpeed - this.currentSpeed) * 0.05;
-    }
+    btn.setPadding(10);
+    btn.setScrollFactor(0);
+    btn.setDepth(1000);
+    btn.setInteractive({ useHandCursor: true });
 
-    body.setVelocityX(this.currentSpeed);
+    return btn;
+  }
 
-    // === ПРЫЖОК ===
-    if (this.controls.jump && body.blocked.down) {
-      body.setVelocityY(-520);
-    }
+  bindEvents() {
+    this.buttons.left.on('pointerdown', () => this.left = true);
+    this.buttons.left.on('pointerup', () => this.left = false);
+    this.buttons.left.on('pointerout', () => this.left = false);
 
-    // === ОБНОВЛЕНИЕ МИРА ===
-    this.platformManager.update();
+    this.buttons.right.on('pointerdown', () => this.right = true);
+    this.buttons.right.on('pointerup', () => this.right = false);
+    this.buttons.right.on('pointerout', () => this.right = false);
 
-    // === СМЕРТЬ ===
-    if (this.player.y > this.scale.height + 300) {
-      this.scene.restart();
-    }
+    this.buttons.jump.on('pointerdown', () => this.jump = true);
+    this.buttons.jump.on('pointerup', () => this.jump = false);
+    this.buttons.jump.on('pointerout', () => this.jump = false);
   }
 }
