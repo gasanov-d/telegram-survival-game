@@ -6,6 +6,9 @@ export default class MobileControls {
     this.right = false;
     this.jump = false;
 
+    // ВКЛЮЧАЕМ MULTITOUCH (КЛЮЧЕВО!)
+    this.scene.input.addPointer(3);
+
     this.createButtons();
   }
 
@@ -13,94 +16,91 @@ export default class MobileControls {
     const w = this.scene.scale.width;
     const h = this.scene.scale.height;
 
-    const size = 90;
-    const alphaIdle = 0.25;
-    const alphaActive = 0.6;
+    const size = 130;
+    const alphaIdle = 0.15;
+    const alphaActive = 0.8;
 
-    // ===== ЛЕВАЯ КНОПКА =====
-    this.leftBtn = this.scene.add.rectangle(
-      80,
-      h - 100,
+    // LEFT
+    const leftBtn = this.scene.add.rectangle(
+      100,
+      h - 140,
       size,
       size,
       0x000000,
       alphaIdle
     )
-      .setScrollFactor(0)
-      .setDepth(1000)
-      .setInteractive();
+    .setScrollFactor(0)
+    .setInteractive({ useHandCursor: false });
 
-    // ===== ПРАВАЯ КНОПКА =====
-    this.rightBtn = this.scene.add.rectangle(
-      200,
-      h - 100,
+    // RIGHT
+    const rightBtn = this.scene.add.rectangle(
+      260,
+      h - 140,
       size,
       size,
       0x000000,
       alphaIdle
     )
-      .setScrollFactor(0)
-      .setDepth(1000)
-      .setInteractive();
+    .setScrollFactor(0)
+    .setInteractive({ useHandCursor: false });
 
-    // ===== ПРЫЖОК =====
-    this.jumpBtn = this.scene.add.rectangle(
-      w - 100,
-      h - 100,
+    // JUMP
+    const jumpBtn = this.scene.add.rectangle(
+      w - 140,
+      h - 140,
       size,
       size,
       0x000000,
       alphaIdle
     )
-      .setScrollFactor(0)
-      .setDepth(1000)
-      .setInteractive();
+    .setScrollFactor(0)
+    .setInteractive({ useHandCursor: false });
 
-    // ===== СОБЫТИЯ =====
+    // === MULTITOUCH EVENTS ===
 
-    this.leftBtn.on('pointerdown', () => {
+    leftBtn.on('pointerdown', () => {
       this.left = true;
-      this.leftBtn.setAlpha(alphaActive);
+      leftBtn.setAlpha(alphaActive);
     });
 
-    this.leftBtn.on('pointerup', () => {
+    leftBtn.on('pointerup', () => {
       this.left = false;
-      this.leftBtn.setAlpha(alphaIdle);
+      leftBtn.setAlpha(alphaIdle);
     });
 
-    this.leftBtn.on('pointerout', () => {
+    leftBtn.on('pointerout', () => {
       this.left = false;
-      this.leftBtn.setAlpha(alphaIdle);
+      leftBtn.setAlpha(alphaIdle);
     });
 
-    this.rightBtn.on('pointerdown', () => {
+    rightBtn.on('pointerdown', () => {
       this.right = true;
-      this.rightBtn.setAlpha(alphaActive);
+      rightBtn.setAlpha(alphaActive);
     });
 
-    this.rightBtn.on('pointerup', () => {
+    rightBtn.on('pointerup', () => {
       this.right = false;
-      this.rightBtn.setAlpha(alphaIdle);
+      rightBtn.setAlpha(alphaIdle);
     });
 
-    this.rightBtn.on('pointerout', () => {
+    rightBtn.on('pointerout', () => {
       this.right = false;
-      this.rightBtn.setAlpha(alphaIdle);
+      rightBtn.setAlpha(alphaIdle);
     });
 
-    this.jumpBtn.on('pointerdown', () => {
+    jumpBtn.on('pointerdown', () => {
       this.jump = true;
-      this.jumpBtn.setAlpha(alphaActive);
+      jumpBtn.setAlpha(alphaActive);
     });
 
-    this.jumpBtn.on('pointerup', () => {
+    jumpBtn.on('pointerup', () => {
       this.jump = false;
-      this.jumpBtn.setAlpha(alphaIdle);
+      jumpBtn.setAlpha(alphaIdle);
     });
 
-    this.jumpBtn.on('pointerout', () => {
+    jumpBtn.on('pointerout', () => {
       this.jump = false;
-      this.jumpBtn.setAlpha(alphaIdle);
+      jumpBtn.setAlpha(alphaIdle);
     });
   }
 }
