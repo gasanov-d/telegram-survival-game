@@ -1,11 +1,9 @@
-class BootScene extends Phaser.Scene {
+export default class BootScene extends Phaser.Scene {
   constructor() {
-    super('Boot');
+    super('BootScene');
   }
 
-  preload() {}
-
   create() {
-    this.scene.start('Menu');
+    this.scene.start('GameScene');
   }
 }
