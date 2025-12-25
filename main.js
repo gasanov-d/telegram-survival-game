@@ -1,7 +1,25 @@
-import { gameConfig } from './config/gameConfig.js';
+import GameScene from './scenes/GameScene.js';
 
-const tg = window.Telegram.WebApp;
-tg.ready();
-tg.expand();
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+}
 
-new Phaser.Game(gameConfig);
+const config = {
+  type: Phaser.AUTO,
+  parent: 'game',
+  width: window.innerWidth,
+  height: window.innerHeight,
+  backgroundColor: '#000000',
+  physics: {
+    default: 'arcade',
+    arcade: {
+      gravity: { y: 900 },
+      debug: false
+    }
+  },
+  scene: [GameScene]
+};
+
+new Phaser.Game(config);
