@@ -1,15 +1,18 @@
-export const GAME_CONFIG = {
-  size: {
-    width: 360,
-    height: 640,
-  },
+import BootScene from '../scenes/BootScene.js';
+import GameScene from '../scenes/GameScene.js';
 
+export const gameConfig = {
+  type: Phaser.AUTO,
+  parent: 'game',
+  width: window.innerWidth,
+  height: window.innerHeight,
+  backgroundColor: '#6fa8dc',
   physics: {
-    gravity: 900,
+    default: 'arcade',
+    arcade: {
+      gravity: { y: 900 },
+      debug: false
+    }
   },
-
-  player: {
-    speed: 250,
-    jumpForce: 500,
-  },
+  scene: [BootScene, GameScene]
 };
