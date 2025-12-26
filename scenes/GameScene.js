@@ -38,7 +38,8 @@ export default class GameScene extends Phaser.Scene {
       fontSize: '28px',
       color: '#fff'
     }).setScrollFactor(0);
-  }
+ this.scene.launch('UIScene');
+ }
 
   update() {
     const body = this.player.body;
