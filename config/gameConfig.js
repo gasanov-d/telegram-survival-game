@@ -15,5 +15,5 @@ export const gameConfig = {
       debug: false
     }
   },
-  scene: [BootScene, GameScene]
+  scene: [BootScene, GameScene, UIScene]
 };
