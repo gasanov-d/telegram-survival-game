@@ -1,5 +1,6 @@
 import BootScene from '../scenes/BootScene.js';
 import GameScene from '../scenes/GameScene.js';
+import UIScene from '../scenes/UIScene.js';
 
 export const gameConfig = {
   type: Phaser.AUTO,
