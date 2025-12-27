@@ -1,28 +1,29 @@
-import Enemy from "../entities/Enemy.js";
+export default class Enemy extends Phaser.Physics.Arcade.Sprite {
+  constructor(scene, x, y, target) {
+    super(scene, x, y, null);
 
-export default class EnemySpawner {
-  constructor(scene, player) {
-    this.scene = scene;
-    this.player = player;
+    scene.add.existing(this);
+    scene.physics.add.existing(this);
 
-    this.enemies = scene.physics.add.group();
+    this.setDisplaySize(30, 30);
+    this.setTint(0xff0000);
 
-    scene.time.addEvent({
-      delay: 2000,
-      loop: true,
-      callback: () => this.spawn()
-    });
-  }
-
-  spawn() {
-    const x = Phaser.Math.Between(0, this.scene.scale.width);
-    const y = Phaser.Math.Between(0, this.scene.scale.height);
-
-    const enemy = new Enemy(this.scene, x, y, this.player);
-    this.enemies.add(enemy);
+    this.speed = 100;
+    this.target = target;
   }
 
   update() {
-    this.enemies.getChildren().forEach(e => e.update());
+    if (!this.target || !this.target.active) return;
+
+    const dx = this.target.x - this.x;
+    const dy = this.target.y - this.y;
+    const len = Math.hypot(dx, dy);
+
+    if (len === 0) return;
+
+    this.body.setVelocity(
+      (dx / len) * this.speed,
+      (dy / len) * this.speed
+    );
   }
 }
