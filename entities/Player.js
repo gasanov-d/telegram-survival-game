@@ -20,10 +20,6 @@ export default class Player {
   takeDamage(amount) {
     this.hp -= amount;
     this.scene.events.emit("player-hp", this.hp);
-
-    if (this.hp <= 0) {
-      this.gameObject.destroy();
-    }
   }
 
   get x() { return this.gameObject.x; }
