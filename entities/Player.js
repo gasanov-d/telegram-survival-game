@@ -1,24 +1,20 @@
-export default class Player extends Phaser.Physics.Arcade.Sprite {
+export default class Player {
   constructor(scene, x, y) {
-    super(scene, x, y, null);
+    this.scene = scene;
 
-    scene.add.existing(this);
-    scene.physics.add.existing(this);
+    this.gameObject = scene.add.rectangle(x, y, 40, 40, 0x00ff00);
+    scene.physics.add.existing(this.gameObject);
 
-    this.setDisplaySize(40, 40);
-    this.setTint(0x00ff00);
+    this.body = this.gameObject.body;
+    this.body.setCollideWorldBounds(true);
 
-    this.speed = 200;
+    this.speed = 220;
     this.hp = 100;
   }
 
   update(inputSystem) {
     const dir = inputSystem.getDirection();
-
-    this.body.setVelocity(
-      dir.x * this.speed,
-      dir.y * this.speed
-    );
+    this.body.setVelocity(dir.x * this.speed, dir.y * this.speed);
   }
 
   takeDamage(amount) {
@@ -26,7 +22,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.scene.events.emit("player-hp", this.hp);
 
     if (this.hp <= 0) {
-      this.destroy();
+      this.gameObject.destroy();
     }
   }
+
+  get x() { return this.gameObject.x; }
+  get y() { return this.gameObject.y; }
+  get active() { return this.gameObject.active; }
 }
