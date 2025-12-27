@@ -23,16 +23,30 @@ export default class GameScene extends Phaser.Scene {
     this.player = new Player(this, w / 2, h / 2);
     this.enemySpawner = new EnemySpawner(this, this.player);
 
+    // 🔥 ГРУППА ПУЛЬ
+    this.bullets = this.physics.add.group();
+
+    // 🔥 ОДИН overlap
+    this.physics.add.overlap(
+      this.bullets,
+      () => this.enemySpawner.enemies.map(e => e.gameObject),
+      (bullet, enemyGO) => {
+        bullet.destroy();
+        const enemy = this.enemySpawner.enemies.find(
+          e => e.gameObject === enemyGO
+        );
+        if (enemy) enemy.takeDamage(10);
+      }
+    );
+
     this.collisionSystem = new CollisionSystem(
       this,
       this.player,
       this.enemySpawner.enemies
     );
 
-    this.bullets = [];
-
     this.lastShot = 0;
-    this.fireRate = 250; // мс
+    this.fireRate = 250;
 
     this.cameras.main.startFollow(this.player.gameObject);
   }
@@ -45,21 +59,6 @@ export default class GameScene extends Phaser.Scene {
       this.shoot();
       this.lastShot = time;
     }
-
-    // столкновения пуль и врагов
-    this.bullets = this.bullets.filter(b => b.gameObject.active);
-    this.enemySpawner.enemies.forEach(enemy => {
-      this.bullets.forEach(bullet => {
-        this.physics.overlap(
-          bullet.gameObject,
-          enemy.gameObject,
-          () => {
-            enemy.takeDamage(10);
-            bullet.gameObject.destroy();
-          }
-        );
-      });
-    });
   }
 
   shoot() {
@@ -74,6 +73,6 @@ export default class GameScene extends Phaser.Scene {
       dir.y
     );
 
-    this.bullets.push(bullet);
+    this.bullets.add(bullet.gameObject);
   }
 }
