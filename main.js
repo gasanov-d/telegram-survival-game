@@ -4,16 +4,24 @@ import UIScene from "./scenes/UIScene.js";
 
 const config = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
-  backgroundColor: "#1d1d1d",
+  width: window.innerWidth,
+  height: window.innerHeight,
+  backgroundColor: "#111111",
+  scale: {
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.CENTER_BOTH
+  },
   physics: {
     default: "arcade",
     arcade: {
-      debug: false
+      debug: true
     }
   },
   scene: [BootScene, GameScene, UIScene]
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+window.addEventListener("resize", () => {
+  game.scale.resize(window.innerWidth, window.innerHeight);
+});
