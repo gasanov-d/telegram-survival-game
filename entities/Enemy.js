@@ -1,22 +1,21 @@
-export default class Enemy extends Phaser.Physics.Arcade.Sprite {
+export default class Enemy {
   constructor(scene, x, y, target) {
-    super(scene, x, y);
-
-    scene.add.existing(this);
-    scene.physics.add.existing(this);
-
-    this.setDisplaySize(30, 30);
-    this.setTint(0xff0000);
-
-    this.speed = 100;
+    this.scene = scene;
     this.target = target;
+
+    this.gameObject = scene.add.rectangle(x, y, 30, 30, 0xff0000);
+    scene.physics.add.existing(this.gameObject);
+
+    this.body = this.gameObject.body;
+    this.speed = 100;
+    this.hp = 30;
   }
 
   update() {
     if (!this.target.active) return;
 
-    const dx = this.target.x - this.x;
-    const dy = this.target.y - this.y;
+    const dx = this.target.x - this.gameObject.x;
+    const dy = this.target.y - this.gameObject.y;
     const len = Math.hypot(dx, dy);
     if (!len) return;
 
@@ -24,5 +23,12 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
       (dx / len) * this.speed,
       (dy / len) * this.speed
     );
+  }
+
+  takeDamage(dmg) {
+    this.hp -= dmg;
+    if (this.hp <= 0) {
+      this.gameObject.destroy();
+    }
   }
 }
