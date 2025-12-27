@@ -1,33 +1,30 @@
-export default class Player {
+export default class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
-    this.scene = scene;
+    super(scene, x, y, null);
 
-    // визуал игрока
-    this.sprite = scene.add.rectangle(x, y, 40, 40, 0xffcc00);
+    scene.physics.add.existing(this);
+    scene.add.existing(this);
 
-    // физика
-    scene.physics.add.existing(this.sprite);
-    this.sprite.body.setCollideWorldBounds(true);
-    this.sprite.body.setBounce(0.1);
+    this.setDisplaySize(40, 40);
+    this.setTint(0x00ff00);
 
-    this.body = this.sprite.body;
+    this.speed = 200;
+    this.hp = 100;
   }
 
-  moveLeft(speed = 250) {
-    this.body.setVelocityX(-speed);
+  update(inputSystem) {
+    const dir = inputSystem.getDirection();
+
+    this.body.setVelocity(
+      dir.x * this.speed,
+      dir.y * this.speed
+    );
   }
 
-  moveRight(speed = 250) {
-    this.body.setVelocityX(speed);
-  }
-
-  stop() {
-    this.body.setVelocityX(0);
-  }
-
-  jump(force = 500) {
-    if (this.body.blocked.down) {
-      this.body.setVelocityY(-force);
+  takeDamage(amount) {
+    this.hp -= amount;
+    if (this.hp <= 0) {
+      this.destroy();
     }
   }
 }
