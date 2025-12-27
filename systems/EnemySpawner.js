@@ -4,7 +4,7 @@ export default class EnemySpawner {
   constructor(scene, player) {
     this.scene = scene;
     this.player = player;
-    this.enemies = scene.physics.add.group();
+    this.enemies = [];
 
     scene.time.addEvent({
       delay: 2000,
@@ -18,10 +18,11 @@ export default class EnemySpawner {
     const y = Phaser.Math.Between(0, this.scene.scale.height);
 
     const enemy = new Enemy(this.scene, x, y, this.player);
-    this.enemies.add(enemy);
+    this.enemies.push(enemy);
   }
 
   update() {
-    this.enemies.getChildren().forEach(e => e.update());
+    this.enemies = this.enemies.filter(e => e.gameObject.active);
+    this.enemies.forEach(e => e.update());
   }
 }
