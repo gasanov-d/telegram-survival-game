@@ -4,7 +4,6 @@ export default class EnemySpawner {
   constructor(scene, player) {
     this.scene = scene;
     this.player = player;
-
     this.enemies = scene.physics.add.group();
 
     scene.time.addEvent({
