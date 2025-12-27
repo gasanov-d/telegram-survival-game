@@ -1,30 +1,30 @@
 export default class ShootButton {
   constructor(scene) {
     this.scene = scene;
-    this.isPressed = false;
+    this.active = false;
 
-    const x = scene.scale.width - 90;
-    const y = scene.scale.height - 90;
+    const r = 60;
+    const x = scene.scale.width - r - 20;
+    const y = scene.scale.height - r - 20;
 
-    this.button = scene.add.circle(x, y, 45, 0xff4444, 0.6)
+    this.bg = scene.add.circle(x, y, r, 0xff0000, 0.4)
       .setScrollFactor(0)
-      .setDepth(200)
       .setInteractive();
 
-    this.button.on("pointerdown", () => {
-      this.isPressed = true;
+    this.bg.on("pointerdown", () => {
+      this.active = true;
     });
 
-    this.button.on("pointerup", () => {
-      this.isPressed = false;
+    this.bg.on("pointerup", () => {
+      this.active = false;
     });
 
-    this.button.on("pointerout", () => {
-      this.isPressed = false;
+    this.bg.on("pointerout", () => {
+      this.active = false;
     });
   }
 
   pressed() {
-    return this.isPressed;
+    return this.active;
   }
 }
