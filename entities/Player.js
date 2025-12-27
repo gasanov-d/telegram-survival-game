@@ -2,8 +2,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
     super(scene, x, y, null);
 
-    scene.physics.add.existing(this);
     scene.add.existing(this);
+    scene.physics.add.existing(this);
 
     this.setDisplaySize(40, 40);
     this.setTint(0x00ff00);
@@ -23,6 +23,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
   takeDamage(amount) {
     this.hp -= amount;
+    this.scene.events.emit("player-hp", this.hp);
+
     if (this.hp <= 0) {
       this.destroy();
     }
